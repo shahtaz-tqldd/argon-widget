@@ -15,6 +15,8 @@ export const defaultWidgetConfig = Object.freeze({
   launcherText: "",
   showBranding: true,
   theme: "light",
+  language: "en",
+  leadConfig: null,
   debug: false,
 });
 
@@ -43,6 +45,7 @@ export function configFromElement(element) {
 
 export function mapPublicConfiguration(data) {
   const settings = data?.widget_settings ?? {};
+  const leadConfig = data?.lead_config ?? {};
   return {
     name: settings.header_title || data?.chatbot_name,
     headerDescription: settings.header_description,
@@ -58,5 +61,15 @@ export function mapPublicConfiguration(data) {
     businessName: data?.business_name,
     description: data?.description,
     otherSettings: settings.other_settings,
+    leadConfig: {
+      isEnabled: leadConfig.is_enabled === true,
+      autoCollect: leadConfig.auto_collect === true,
+      introMessage: leadConfig.intro_message || "",
+      requireConsent: leadConfig.require_consent === true,
+      consentMessage: leadConfig.consent_message || "",
+      fields: Array.isArray(leadConfig.collectable_fields)
+        ? leadConfig.collectable_fields
+        : [],
+    },
   };
 }

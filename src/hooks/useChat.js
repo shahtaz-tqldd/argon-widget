@@ -6,7 +6,10 @@ import {
   clearConversationToken,
   createClientMessageId,
   getConversationToken,
+  getSessionToken,
+  getVisitorRecord,
   saveConversationToken,
+  saveVisitorConversation,
 } from "../lib/visitor";
 
 function normalizeMessage(message) {
@@ -53,6 +56,10 @@ export function useChat(config) {
   const conversationRef = useRef(null);
   const startPromiseRef = useRef(null);
   const [remoteConfig, setRemoteConfig] = useState(null);
+  const [isConfigurationLoaded, setIsConfigurationLoaded] = useState(false);
+  const [visitor, setVisitor] = useState(null);
+  const [visitorSessions, setVisitorSessions] = useState([]);
+  const [isVisitorLoaded, setIsVisitorLoaded] = useState(false);
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isStarting, setIsStarting] = useState(false);
@@ -60,6 +67,23 @@ export function useChat(config) {
   const [isResponding, setIsResponding] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
+
+  const loadVisitorHistory = useCallback(async (visitorId, options = {}) => {
+    const [visitorValue, sessionValues] = await Promise.all([
+      api.getVisitor(visitorId, options),
+      api.getVisitorSessions(visitorId, options),
+    ]);
+    setVisitor(visitorValue);
+    setVisitorSessions(
+      (Array.isArray(sessionValues) ? sessionValues : []).map((session) => ({
+        ...session,
+        conversationToken:
+          session.conversation_token ||
+          getSessionToken(config.publicKey, session.id),
+      })),
+    );
+    return { visitor: visitorValue, sessions: sessionValues };
+  }, [api, config.publicKey]);
 
   useEffect(() => {
     if (!config.publicKey) return undefined;
@@ -70,25 +94,78 @@ export function useChat(config) {
         if (error.name !== "AbortError") {
           setMessages((current) => [...current, systemMessage("This chat is currently unavailable.")]);
         }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsConfigurationLoaded(true);
       });
     return () => controller.abort();
   }, [api, config]);
 
-  const start = useCallback(async () => {
+  useEffect(() => {
+    if (!config.publicKey) {
+      setIsVisitorLoaded(true);
+      return undefined;
+    }
+    const visitorId = getVisitorRecord(config.publicKey)?.visitorId;
+    if (!visitorId) {
+      setIsVisitorLoaded(true);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    loadVisitorHistory(visitorId, { signal: controller.signal })
+      .catch((error) => {
+        if (error.name !== "AbortError" && config.debug) {
+          console.warn("[Argon] Visitor history could not be loaded", error);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsVisitorLoaded(true);
+      });
+    return () => controller.abort();
+  }, [config, loadVisitorHistory]);
+
+  const refreshVisitorHistory = useCallback(async () => {
+    const visitorId =
+      conversationRef.current?.visitorId ||
+      getVisitorRecord(config.publicKey)?.visitorId;
+    if (!visitorId) return null;
+    setIsVisitorLoaded(false);
+    try {
+      return await loadVisitorHistory(visitorId);
+    } finally {
+      setIsVisitorLoaded(true);
+    }
+  }, [config.publicKey, loadVisitorHistory]);
+
+  const start = useCallback(async ({
+    conversationToken = null,
+    leadData,
+    leadId,
+    forceNew = false,
+  } = {}) => {
     if (conversationRef.current) return conversationRef.current;
     if (startPromiseRef.current) return startPromiseRef.current;
     if (!config.publicKey) throw new Error("A chatbot public key is required.");
 
     setIsStarting(true);
     startPromiseRef.current = (async () => {
-      const storedToken = getConversationToken(config.publicKey);
+      const explicitlySelected = Boolean(conversationToken);
+      const storedToken = forceNew
+        ? ""
+        : conversationToken || getConversationToken(config.publicKey);
       let bootstrap;
       try {
-        bootstrap = await api.startConversation(storedToken);
+        bootstrap = await api.startConversation({
+          conversationToken: storedToken,
+          leadData,
+          leadId,
+        });
       } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 401 || !storedToken) throw error;
-        clearConversationToken(config.publicKey);
-        bootstrap = await api.startConversation("");
+        clearConversationToken(config.publicKey, storedToken);
+        if (explicitlySelected) throw error;
+        bootstrap = await api.startConversation({ leadData, leadId });
       }
 
       const value = {
@@ -100,12 +177,19 @@ export function useChat(config) {
           bootstrap.conversation_token,
         ),
         status: bootstrap.session.status,
+        visitorId: bootstrap.session.visitor_id,
       };
       saveConversationToken(config.publicKey, value.token);
+      saveVisitorConversation(config.publicKey, value);
       conversationRef.current = value;
       setConversation(value);
       setIsEnded(["resolved", "closed"].includes(value.status));
       setMessages((bootstrap.messages ?? []).map(normalizeMessage));
+      void loadVisitorHistory(value.visitorId).catch((error) => {
+        if (config.debug) {
+          console.warn("[Argon] Visitor history could not be refreshed", error);
+        }
+      });
       return value;
     })();
 
@@ -115,7 +199,17 @@ export function useChat(config) {
       startPromiseRef.current = null;
       setIsStarting(false);
     }
-  }, [api, config]);
+  }, [api, config, loadVisitorHistory]);
+
+  const leaveConversation = useCallback(() => {
+    conversationRef.current = null;
+    setConversation(null);
+    setMessages([]);
+    setIsSending(false);
+    setIsResponding(false);
+    setIsConnected(false);
+    setIsEnded(false);
+  }, []);
 
   useEffect(() => {
     if (!conversation?.websocketUrl || isEnded) return undefined;
@@ -232,7 +326,16 @@ export function useChat(config) {
     isConnected,
     isEnded,
     remoteConfig,
+    isConfigurationLoaded,
+    visitor,
+    visitorSessions,
+    isVisitorLoaded,
+    hasStoredConversation: Boolean(getConversationToken(config.publicKey)),
+    hasConversation: Boolean(conversation),
+    conversation,
     start,
     send,
+    leaveConversation,
+    refreshVisitorHistory,
   };
 }

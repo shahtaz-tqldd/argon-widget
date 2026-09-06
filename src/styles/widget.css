@@ -24,7 +24,8 @@
   box-sizing: border-box;
 }
 .argon-widget button,
-.argon-widget textarea {
+.argon-widget textarea,
+.argon-widget input {
   font: inherit;
 }
 .argon-launcher-row {
@@ -73,9 +74,10 @@
 }
 .argon-launcher:focus-visible,
 .argon-widget button:focus-visible,
-.argon-widget textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--argon-primary) 30%, transparent);
-  outline-offset: 3px;
+.argon-widget textarea:focus-visible,
+.argon-widget input:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--argon-primary) 30%, transparent);
+  outline-offset: 1px;
 }
 .argon-launcher svg {
   width: 25px;
@@ -182,6 +184,56 @@
   stroke-width: 1.8;
   stroke-linecap: round;
 }
+.argon-header-menu {
+  position: relative;
+  display: block !important;
+  margin-left: auto;
+}
+.argon-header-menu .argon-icon-button {
+  margin-left: 0;
+}
+.argon-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 210px;
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid rgba(21, 29, 46, 0.1);
+  border-radius: 13px;
+  color: #1b2130;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(21, 29, 46, 0.18);
+  animation: argon-menu-enter 0.14s ease-out;
+}
+.argon-menu button {
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.argon-menu button:not(:disabled):hover {
+  color: var(--argon-primary);
+  background: color-mix(in srgb, var(--argon-primary) 9%, #fff);
+}
+.argon-menu button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+@keyframes argon-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
 .argon-messages {
   display: flex;
   flex-direction: column;
@@ -219,6 +271,110 @@
   font-size: 12px;
   text-align: center;
 }
+.argon-session-home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 22px 17px;
+  background: var(--argon-secondary, #f7f8fb);
+}
+.argon-session-heading {
+  display: grid;
+  gap: 3px;
+}
+.argon-session-heading strong {
+  font-size: 16px;
+}
+.argon-session-heading span {
+  color: #737988;
+  font-size: 12px;
+}
+.argon-session-list {
+  display: grid;
+  gap: 9px;
+}
+.argon-session-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid #e1e4eb;
+  border-radius: 13px;
+  color: #1b2130;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.argon-session-card:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--argon-primary) 42%, #e1e4eb);
+  box-shadow: 0 5px 16px rgba(21, 29, 46, 0.07);
+  transform: translateY(-1px);
+}
+.argon-session-card:disabled {
+  opacity: 0.62;
+  cursor: default;
+}
+.argon-session-card-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.argon-session-card-copy strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argon-session-card-copy small {
+  overflow: hidden;
+  color: #7b8190;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argon-session-status {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: var(--argon-primary);
+  background: color-mix(in srgb, var(--argon-primary) 11%, #fff);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.argon-session-status--resolved,
+.argon-session-status--closed {
+  color: #737988;
+  background: #eff1f4;
+}
+.argon-new-session {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--argon-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+.argon-start-error {
+  justify-content: center;
+  text-align: center;
+}
+.argon-start-error > strong {
+  font-size: 16px;
+}
+.argon-start-error > span {
+  color: #737988;
+  font-size: 12px;
+}
 .argon-typing {
   width: 53px;
   display: flex;
@@ -240,6 +396,134 @@
 }
 .argon-typing i:nth-child(3) {
   animation-delay: 0.3s;
+}
+.argon-lead-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  padding: 22px 17px;
+  background: var(--argon-secondary, #f7f8fb);
+}
+.argon-lead-form .argon-message {
+  max-width: 100%;
+}
+.argon-lead-fields {
+  display: grid;
+  gap: 13px;
+}
+.argon-floating-input {
+  position: relative;
+  padding-top: 5px;
+}
+.argon-floating-input label {
+  position: absolute;
+  top: 28px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 0 4px;
+  color: #737988;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  transition:
+    top 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+.argon-floating-input label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argon-floating-input small {
+  color: #7b8190;
+  font-size: 11px;
+  font-weight: 500;
+}
+.argon-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 17px 12px 7px;
+  border: 1px solid #dde0e8;
+  border-radius: 11px;
+  outline: none;
+  color: #1b2130;
+  background: #fff;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+.argon-input:focus {
+  border-color: var(--argon-primary);
+  box-shadow: 0 0 0 3px
+    color-mix(in srgb, var(--argon-primary) 12%, transparent);
+}
+.argon-input:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.argon-input:focus + label,
+.argon-input:not(:placeholder-shown) + label {
+  top: 5px;
+  color: var(--argon-primary);
+  transform: translateY(-50%) scale(0.88);
+}
+.argon-input[aria-invalid="true"] {
+  border-color: #d92d20;
+}
+.argon-input[aria-invalid="true"] + label {
+  color: #b42318;
+}
+.argon-input-error {
+  margin: 5px 4px 0;
+  color: #b42318;
+  font-size: 12px;
+}
+.argon-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #555c6b;
+  font-size: 12px;
+  line-height: 1.45;
+  cursor: pointer;
+}
+.argon-consent input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  margin: 1px 0 0;
+  accent-color: var(--argon-primary);
+  cursor: pointer;
+}
+.argon-consent input:disabled {
+  cursor: wait;
+}
+.argon-lead-form > button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 11px;
+  color: #fff;
+  background: var(--argon-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+.argon-lead-form > button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.argon-lead-error {
+  margin: -6px 0 0;
+  color: #b42318;
+  font-size: 12px;
 }
 @keyframes argon-bounce {
   to {
@@ -327,8 +611,56 @@
   color: #eef0f5;
   background: #171a21;
 }
+.argon-widget--dark .argon-menu {
+  color: #eef0f5;
+  border-color: #353a45;
+  background: #252932;
+}
+.argon-widget--dark .argon-menu button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--argon-primary) 18%, #252932);
+}
 .argon-widget--dark .argon-messages {
   background: #101217;
+}
+.argon-widget--dark .argon-lead-form {
+  background: #101217;
+}
+.argon-widget--dark .argon-session-home {
+  background: #101217;
+}
+.argon-widget--dark .argon-session-heading span,
+.argon-widget--dark .argon-session-card-copy small,
+.argon-widget--dark .argon-start-error > span {
+  color: #aeb3bf;
+}
+.argon-widget--dark .argon-session-card {
+  color: #f5f6f8;
+  border-color: #353a45;
+  background: #252932;
+}
+.argon-widget--dark .argon-session-status {
+  background: color-mix(in srgb, var(--argon-primary) 20%, #252932);
+}
+.argon-widget--dark .argon-session-status--resolved,
+.argon-widget--dark .argon-session-status--closed {
+  color: #aeb3bf;
+  background: #353a45;
+}
+.argon-widget--dark .argon-input {
+  color: #f5f6f8;
+  border-color: #3a3f4a;
+  background: #252932;
+}
+.argon-widget--dark .argon-floating-input label {
+  color: #aeb3bf;
+  background: #252932;
+}
+.argon-widget--dark .argon-input:focus + label,
+.argon-widget--dark .argon-input:not(:placeholder-shown) + label {
+  color: var(--argon-primary);
+}
+.argon-widget--dark .argon-consent {
+  color: #c2c6d0;
 }
 .argon-widget--dark .argon-message--bot,
 .argon-widget--dark .argon-typing {
@@ -363,7 +695,8 @@
 @media (prefers-reduced-motion: reduce) {
   .argon-panel,
   .argon-launcher,
-  .argon-typing i {
+  .argon-typing i,
+  .argon-menu {
     animation: none;
     transition: none;
   }

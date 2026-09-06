@@ -60,7 +60,27 @@ export function createWidgetApi(config) {
       return request(chatbotEndpoint(config), options);
     },
 
-    async startConversation(conversationToken, options = {}) {
+    async getVisitor(visitorId, options = {}) {
+      return request(
+        chatbotEndpoint(config, `visitors/${encodeURIComponent(visitorId)}/`),
+        options,
+      );
+    },
+
+    async getVisitorSessions(visitorId, options = {}) {
+      return request(
+        chatbotEndpoint(
+          config,
+          `visitors/${encodeURIComponent(visitorId)}/sessions/`,
+        ),
+        options,
+      );
+    },
+
+    async startConversation(
+      { conversationToken = "", leadData, leadId } = {},
+      options = {},
+    ) {
       const isNewConversation = !conversationToken;
       if (isNewConversation) void loadUserMetadata();
       const includedUserMetadata = isNewConversation
@@ -70,8 +90,14 @@ export function createWidgetApi(config) {
         method: "POST",
         ...options,
         body: conversationToken
-          ? { conversation_token: conversationToken }
-          : {
+          ? {
+            conversation_token: conversationToken,
+            ...(leadData ? { lead_data: leadData } : {}),
+            ...(leadId ? { lead_id: leadId } : {}),
+          }
+        : {
+            ...(leadData ? { lead_data: leadData } : {}),
+            ...(leadId ? { lead_id: leadId } : {}),
               ...(includedUserMetadata && Object.keys(includedUserMetadata).length
                 ? { user_metadata: includedUserMetadata }
                 : {}),
