@@ -184,6 +184,24 @@
   stroke-width: 1.8;
   stroke-linecap: round;
 }
+.argon-back-button {
+  flex: 0 0 auto;
+  margin-left: 0;
+}
+.argon-back-button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.argon-header-copy {
+  min-width: 0;
+  flex: 1;
+}
+.argon-header-copy strong,
+.argon-header-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .argon-header-menu {
   position: relative;
   display: block !important;

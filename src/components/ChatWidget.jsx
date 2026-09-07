@@ -1,17 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { resolveWidgetConfig } from "../config/widgetConfig";
 import { useChat } from "../hooks/useChat";
-import { ChatIcon, CloseIcon, MenuIcon, SendIcon } from "./icons";
-import { FloatingInput } from "./ui/input";
+import { CloseIcon } from "./icons";
+import { ChatScreen } from "./screens/ChatScreen";
+import { LeadFormScreen } from "./screens/LeadFormScreen";
+import { SessionListScreen } from "./screens/SessionListScreen";
+import { WidgetHeader } from "./WidgetHeader";
 
-function formatSessionDate(value, language) {
-  if (!value) return "Previous conversation";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Previous conversation";
-  return new Intl.DateTimeFormat(language || "en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+const SCREENS = Object.freeze({
+  CHAT: "chat",
+  LEAD_FORM: "lead-form",
+  SESSIONS: "sessions",
+});
+
+function chooseInitialScreen({
+  sessions,
+  canCollectLead,
+  hasReusableLead,
+  hasStoredConversation,
+}) {
+  if (sessions.length) return SCREENS.SESSIONS;
+  if (canCollectLead && !hasReusableLead && !hasStoredConversation) {
+    return SCREENS.LEAD_FORM;
+  }
+  return SCREENS.CHAT;
 }
 
 export function ChatWidget({ config: suppliedConfig = {} }) {
@@ -41,57 +53,56 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
   } = useChat(baseConfig);
   const config = resolveWidgetConfig({ ...baseConfig, ...remoteConfig });
   const [isOpen, setIsOpen] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [isConsentAccepted, setIsConsentAccepted] = useState(false);
+  const [selectedScreen, setScreen] = useState(null);
+  const [startMode, setStartMode] = useState("initial");
   const [leadError, setLeadError] = useState("");
   const [sessionError, setSessionError] = useState("");
-  const [flow, setFlow] = useState("home");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const messageEndRef = useRef(null);
-  const menuRef = useRef(null);
+
   const leadFields = (config.leadConfig?.fields ?? []).filter(
     (field) => field?.mode !== "hidden" && field?.value,
   );
   const canCollectLead = Boolean(
     config.leadConfig?.isEnabled &&
-    config.leadConfig?.autoCollect &&
-    leadFields.length,
+      config.leadConfig?.autoCollect &&
+      leadFields.length,
   );
+  const isReady = isConfigurationLoaded && isVisitorLoaded;
   const hasReusableLead = Boolean(visitor?.lead_id);
   const hasSessionHistory = visitorSessions.length > 0;
-  const isReady = isConfigurationLoaded && isVisitorLoaded;
-  const shouldShowSessions = Boolean(
-    isReady &&
-    !hasConversation &&
-    hasSessionHistory &&
-    flow === "home",
-  );
-  const shouldCollectLead = Boolean(
-    isReady &&
-    !hasConversation &&
-    canCollectLead &&
-    !hasReusableLead &&
-    (flow === "new" || (!hasSessionHistory && !hasStoredConversation)),
-  );
+  const initialScreen = isReady
+    ? chooseInitialScreen({
+        sessions: visitorSessions,
+        canCollectLead,
+        hasReusableLead,
+        hasStoredConversation,
+      })
+    : null;
+  const screen = hasConversation
+    ? SCREENS.CHAT
+    : selectedScreen ?? initialScreen;
 
   useEffect(() => {
     if (
       !isOpen ||
       !isReady ||
+      screen !== SCREENS.CHAT ||
       hasConversation ||
       isStarting ||
-      shouldShowSessions ||
-      shouldCollectLead ||
       sessionError
-    ) return;
+    ) {
+      return;
+    }
 
-    const resumeLegacyConversation = hasStoredConversation && !visitor;
+    const resumeLegacyConversation =
+      startMode === "initial" && hasStoredConversation && !visitor;
     start(
       resumeLegacyConversation
         ? undefined
         : { forceNew: true, leadId: visitor?.lead_id },
     ).catch((error) => {
-      setSessionError(error.message || "The conversation could not be started.");
+      setSessionError(
+        error.message || "The conversation could not be started.",
+      );
     });
   }, [
     hasConversation,
@@ -99,68 +110,22 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     isOpen,
     isReady,
     isStarting,
+    screen,
     sessionError,
-    shouldCollectLead,
-    shouldShowSessions,
     start,
+    startMode,
     visitor,
   ]);
 
-  useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isSending]);
-
-  useEffect(() => {
-    if (!isMenuOpen) return undefined;
-
-    function closeMenu(event) {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-        return;
-      }
-      if (
-        event.type === "pointerdown" &&
-        !event.composedPath().includes(menuRef.current)
-      ) {
-        setIsMenuOpen(false);
-      }
-    }
-
-    document.addEventListener("keydown", closeMenu);
-    document.addEventListener("pointerdown", closeMenu);
-    return () => {
-      document.removeEventListener("keydown", closeMenu);
-      document.removeEventListener("pointerdown", closeMenu);
-    };
-  }, [isMenuOpen]);
-
-  function handleSubmit(event) {
-    event.preventDefault();
-    if (!draft.trim()) return;
-    send(draft);
-    setDraft("");
-  }
-
   function toggleChat() {
-    const nextOpen = !isOpen;
-    setIsOpen(nextOpen);
-    if (!nextOpen) setIsMenuOpen(false);
+    setIsOpen((current) => !current);
   }
 
-  async function handleLeadSubmit(event) {
-    event.preventDefault();
-    if (config.leadConfig?.requireConsent && !isConsentAccepted) return;
+  async function handleLeadSubmit(leadData) {
     setLeadError("");
-    const formData = new FormData(event.currentTarget);
-    const leadData = Object.fromEntries(
-      leadFields.map((field) => [
-        field.value,
-        String(formData.get(field.value) ?? "").trim(),
-      ]),
-    );
-
     try {
       await start({ forceNew: true, leadData });
+      setScreen(SCREENS.CHAT);
     } catch (error) {
       setLeadError(
         error.message || "We couldn't save your details. Please try again.",
@@ -173,6 +138,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     setSessionError("");
     try {
       await start({ conversationToken: session.conversationToken });
+      setScreen(SCREENS.CHAT);
     } catch (error) {
       setSessionError(
         error.message || "This conversation could not be resumed.",
@@ -180,32 +146,39 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     }
   }
 
-  function handleNewSession() {
+  function showNewSession(visitorValue = visitor) {
+    leaveConversation();
+    setLeadError("");
     setSessionError("");
-    setIsConsentAccepted(false);
-    setFlow("new");
+
+    if (canCollectLead && !visitorValue?.lead_id) {
+      setScreen(SCREENS.LEAD_FORM);
+      return;
+    }
+
+    setStartMode("new");
+    setScreen(SCREENS.CHAT);
   }
 
-  async function handleStartNewFromMenu() {
-    setIsMenuOpen(false);
-    await refreshVisitorHistory().catch(() => null);
-    leaveConversation();
-    setDraft("");
-    handleNewSession();
+  async function handleStartNew() {
+    const history = await refreshVisitorHistory().catch(() => null);
+    showNewSession(history?.visitor ?? visitor);
   }
 
-  async function handleViewPastSessions() {
-    setIsMenuOpen(false);
-    await refreshVisitorHistory().catch(() => null);
+  async function showSessionHistory() {
+    const history = await refreshVisitorHistory().catch(() => null);
+    const sessions = history?.sessions ?? visitorSessions;
+    if (!sessions.length) return;
+
     leaveConversation();
-    setDraft("");
+    setLeadError("");
     setSessionError("");
-    setFlow("home");
+    setStartMode("initial");
+    setScreen(SCREENS.SESSIONS);
   }
 
   function handleDownloadSession() {
     if (!conversation) return;
-    setIsMenuOpen(false);
     const transcript = [
       `${config.name} conversation`,
       `Session: ${conversation.sessionId}`,
@@ -218,9 +191,16 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
             : message.sender === "system"
               ? "System"
               : message.senderName || config.name;
-        const timestamp = message.createdAt
-          ? ` [${new Date(message.createdAt).toLocaleString(config.language)}]`
-          : "";
+        let timestamp = "";
+        if (message.createdAt) {
+          try {
+            timestamp = ` [${new Date(message.createdAt).toLocaleString(
+              config.language,
+            )}]`;
+          } catch {
+            timestamp = ` [${new Date(message.createdAt).toLocaleString()}]`;
+          }
+        }
         return `${sender}${timestamp}: ${message.content}`;
       }),
     ].join("\n");
@@ -238,6 +218,21 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
+  const headerDescription = !isReady
+    ? "Loading…"
+    : screen === SCREENS.SESSIONS
+      ? "Choose a conversation"
+      : screen === SCREENS.LEAD_FORM
+        ? "Start a conversation"
+        : isEnded
+          ? "Conversation ended"
+          : isStarting || !isConnected
+            ? "Connecting…"
+            : config.headerDescription;
+  const showBack = Boolean(
+    isReady && screen !== SCREENS.SESSIONS && hasSessionHistory,
+  );
+
   return (
     <section
       className={`argon-widget argon-widget--${config.position} argon-widget--${config.theme}`}
@@ -254,271 +249,60 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
           role="dialog"
           aria-label={`${config.name} conversation`}
         >
-          <header className="argon-header">
-            <span className="argon-avatar">
-              {config.logo ? <img src={config.logo} alt="" /> : <ChatIcon />}
-            </span>
-            <div>
-              <strong>{config.name}</strong>
-              <span>
-                <i />
-                {isEnded
-                  ? "Conversation ended"
-                  : !hasConversation && isReady
-                    ? shouldShowSessions
-                      ? "Choose a conversation"
-                      : "Start a conversation"
-                  : isStarting || !isConnected
-                    ? "Connecting…"
-                    : config.headerDescription}
-              </span>
-            </div>
-            <div className="argon-header-menu" ref={menuRef}>
-              <button
-                type="button"
-                className="argon-icon-button"
-                onClick={() => setIsMenuOpen((current) => !current)}
-                aria-label="Conversation menu"
-                aria-haspopup="menu"
-                aria-expanded={isMenuOpen}
-              >
-                <MenuIcon />
-              </button>
-              {isMenuOpen && (
-                <div className="argon-menu" role="menu">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={isStarting}
-                    onClick={handleStartNewFromMenu}
-                  >
-                    Start a new session
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={!hasConversation || isStarting}
-                    onClick={handleDownloadSession}
-                  >
-                    Download the session
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={
-                      isStarting || (!visitor && !hasStoredConversation)
-                    }
-                    onClick={handleViewPastSessions}
-                  >
-                    View past sessions
-                  </button>
-                </div>
-              )}
-            </div>
-          </header>
-          {!isReady || (isStarting && !hasConversation) ? (
-            <div className="argon-messages" aria-live="polite">
-              <div className="argon-message argon-message--bot">
-                {config.welcomeMessage}
-              </div>
-              <div className="argon-typing" aria-label="Loading chat">
-                <i />
-                <i />
-                <i />
-              </div>
-            </div>
-          ) : shouldShowSessions ? (
-            <div className="argon-session-home">
-              <div className="argon-session-heading">
-                <strong>
-                  Welcome back
-                  {visitor?.lead_data?.name
-                    ? `, ${visitor.lead_data.name}`
-                    : ""}
-                </strong>
-                <span>Continue a conversation or start a new one.</span>
-              </div>
-              <div className="argon-session-list">
-                {visitorSessions.map((session) => {
-                  const canResume = Boolean(
-                    session.status === "open" && session.conversationToken,
-                  );
-                  return (
-                    <button
-                      key={session.id}
-                      type="button"
-                      className="argon-session-card"
-                      disabled={!canResume || isStarting}
-                      onClick={() => handleResumeSession(session)}
-                    >
-                      <span className="argon-session-card-copy">
-                        <strong>
-                          {session.status === "open"
-                            ? "Open conversation"
-                            : "Past conversation"}
-                        </strong>
-                        <small>
-                          {formatSessionDate(
-                            session.last_activity_at || session.created_at,
-                            config.language,
-                          )}
-                        </small>
-                      </span>
-                      <span
-                        className={`argon-session-status argon-session-status--${session.status}`}
-                      >
-                        {canResume ? "Continue" : session.status}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              {sessionError && (
-                <p className="argon-lead-error" role="alert">
-                  {sessionError}
-                </p>
-              )}
-              <button
-                type="button"
-                className="argon-new-session"
-                onClick={handleNewSession}
-              >
-                Start a new conversation
-              </button>
-            </div>
-          ) : shouldCollectLead ? (
-            <form className="argon-lead-form" onSubmit={handleLeadSubmit}>
-              <div className="argon-message argon-message--bot">
-                {config.leadConfig.introMessage || config.welcomeMessage}
-              </div>
-              <div className="argon-lead-fields">
-                {leadFields.map((field, index) => {
-                  const inputId = `argon-lead-${index}`;
-                  const inputType = [
-                    "email",
-                    "number",
-                    "tel",
-                    "text",
-                    "url",
-                  ].includes(field.type)
-                    ? field.type
-                    : "text";
-                  return (
-                    <FloatingInput
-                      key={field.value}
-                      id={inputId}
-                      name={field.value}
-                      label={field.label || field.value}
-                      type={inputType}
-                      required={field.mode === "required"}
-                      optional={field.mode === "optional"}
-                      autoComplete={field.value}
-                      disabled={isStarting}
-                    />
-                  );
-                })}
-              </div>
-              {config.leadConfig.requireConsent && (
-                <label className="argon-consent" htmlFor="argon-lead-consent">
-                  <input
-                    id="argon-lead-consent"
-                    type="checkbox"
-                    checked={isConsentAccepted}
-                    required
-                    disabled={isStarting}
-                    onChange={(event) =>
-                      setIsConsentAccepted(event.target.checked)
-                    }
-                  />
-                  <span>
-                    {config.leadConfig.consentMessage ||
-                      "I agree to the collection of my information."}
-                  </span>
-                </label>
-              )}
-              {leadError && (
-                <p className="argon-lead-error" role="alert">
-                  {leadError}
-                </p>
-              )}
-              <button
-                type="submit"
-                disabled={
-                  isStarting ||
-                  (config.leadConfig.requireConsent && !isConsentAccepted)
-                }
-                className="!rounded-full"
-              >
-                {isStarting ? "Starting chat…" : "Start chat"}
-              </button>
-            </form>
-          ) : !hasConversation && sessionError ? (
-            <div className="argon-session-home argon-start-error">
-              <strong>We couldn’t start the conversation</strong>
-              <span>{sessionError}</span>
-              <button
-                type="button"
-                className="argon-new-session"
-                onClick={() => setSessionError("")}
-              >
-                Try again
-              </button>
-            </div>
+          <WidgetHeader
+            title={config.name}
+            description={headerDescription}
+            showBack={showBack}
+            isBusy={isStarting || !isReady}
+            canDownload={hasConversation}
+            canViewSessions={hasSessionHistory || Boolean(visitor)}
+            onBack={showSessionHistory}
+            onStartNew={handleStartNew}
+            onDownload={handleDownloadSession}
+            onViewSessions={showSessionHistory}
+          />
+
+          {!isReady || !screen ? (
+            <ChatScreen config={config} messages={[]} isLoading />
+          ) : screen === SCREENS.LEAD_FORM ? (
+            <LeadFormScreen
+              config={{
+                ...config.leadConfig,
+                introMessage:
+                  config.leadConfig.introMessage || config.welcomeMessage,
+              }}
+              fields={leadFields}
+              isSubmitting={isStarting}
+              error={leadError}
+              onSubmit={handleLeadSubmit}
+            />
+          ) : screen === SCREENS.SESSIONS ? (
+            <SessionListScreen
+              visitor={visitor}
+              sessions={visitorSessions}
+              language={config.language}
+              isLoading={isStarting}
+              error={sessionError}
+              onResume={handleResumeSession}
+              onStartNew={handleStartNew}
+            />
           ) : (
-            <div className="argon-messages" aria-live="polite">
-              <div className="argon-message argon-message--bot">
-                {config.welcomeMessage}
-              </div>
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`argon-message argon-message--${message.sender}`}
-                >
-                  {message.content}
-                </div>
-              ))}
-              {(isSending || isResponding) && (
-                <div className="argon-typing" aria-label="Assistant is typing">
-                  <i />
-                  <i />
-                  <i />
-                </div>
-              )}
-              <div ref={messageEndRef} />
-            </div>
+            <ChatScreen
+              config={config}
+              messages={messages}
+              isLoading={isStarting && !hasConversation}
+              isSending={isSending}
+              isResponding={isResponding}
+              isEnded={isEnded}
+              error={!hasConversation ? sessionError : ""}
+              onRetry={() => setSessionError("")}
+              onSend={send}
+            />
           )}
-          {hasConversation && (
-            <form className="argon-composer" onSubmit={handleSubmit}>
-              <label className="argon-sr-only" htmlFor="argon-message">
-                Message
-              </label>
-              <textarea
-                id="argon-message"
-                rows="1"
-                value={draft}
-                disabled={isEnded}
-                placeholder={
-                  isEnded ? "This conversation has ended" : config.placeholder
-                }
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey)
-                    handleSubmit(event);
-                }}
-              />
-              <button
-                type="submit"
-                disabled={!draft.trim() || isSending || isEnded}
-                aria-label="Send message"
-              >
-                <SendIcon />
-              </button>
-            </form>
-          )}
+
           {config.showBranding && (
             <footer>
-              Powered by{" "}
-              <strong className="font-bold text-primary">Argon Chatbot</strong>
+              Powered by <strong>Argon Chatbot</strong>
             </footer>
           )}
         </div>
