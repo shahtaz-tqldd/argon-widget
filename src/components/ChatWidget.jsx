@@ -253,6 +253,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
             title={config.name}
             description={headerDescription}
             showBack={showBack}
+            showMenu={screen !== SCREENS.SESSIONS}
             isBusy={isStarting || !isReady}
             canDownload={hasConversation}
             canViewSessions={hasSessionHistory || Boolean(visitor)}
@@ -280,7 +281,6 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
             <SessionListScreen
               visitor={visitor}
               sessions={visitorSessions}
-              language={config.language}
               isLoading={isStarting}
               error={sessionError}
               onResume={handleResumeSession}

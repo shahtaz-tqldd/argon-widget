@@ -5,6 +5,7 @@ export function WidgetHeader({
   title,
   description,
   showBack,
+  showMenu = true,
   isBusy,
   canDownload,
   canViewSessions,
@@ -63,46 +64,48 @@ export function WidgetHeader({
           {description}
         </span>
       </div>
-      <div className="argon-header-menu" ref={menuRef}>
-        <button
-          type="button"
-          className="argon-icon-button"
-          onClick={() => setIsMenuOpen((current) => !current)}
-          aria-label="Conversation menu"
-          aria-haspopup="menu"
-          aria-expanded={isMenuOpen}
-        >
-          <MenuIcon />
-        </button>
-        {isMenuOpen && (
-          <div className="argon-menu" role="menu">
-            <button
-              type="button"
-              role="menuitem"
-              disabled={isBusy}
-              onClick={() => runMenuAction(onStartNew)}
-            >
-              Start a new session
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={!canDownload || isBusy}
-              onClick={() => runMenuAction(onDownload)}
-            >
-              Download the session
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={!canViewSessions || isBusy}
-              onClick={() => runMenuAction(onViewSessions)}
-            >
-              View past sessions
-            </button>
-          </div>
-        )}
-      </div>
+      {showMenu && (
+        <div className="argon-header-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="argon-icon-button"
+            onClick={() => setIsMenuOpen((current) => !current)}
+            aria-label="Conversation menu"
+            aria-haspopup="menu"
+            aria-expanded={isMenuOpen}
+          >
+            <MenuIcon />
+          </button>
+          {isMenuOpen && (
+            <div className="argon-menu" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                disabled={isBusy}
+                onClick={() => runMenuAction(onStartNew)}
+              >
+                Start a new session
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!canDownload || isBusy}
+                onClick={() => runMenuAction(onDownload)}
+              >
+                Download the session
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!canViewSessions || isBusy}
+                onClick={() => runMenuAction(onViewSessions)}
+              >
+                View past sessions
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </header>
   );
 }
