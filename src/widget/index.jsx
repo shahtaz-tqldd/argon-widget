@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import widgetStyles from "../styles/widget.css?inline";
-import { ChatWidget } from "../components/ChatWidget";
+import { ChatWidget } from "../components/chat-widget";
 import { configFromElement, resolveWidgetConfig } from "../config/widgetConfig";
 
 const ELEMENT_NAME = "argon-chat-widget";

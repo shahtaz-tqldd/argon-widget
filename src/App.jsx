@@ -1,4 +1,4 @@
-import { ChatWidget } from "./components/ChatWidget";
+import { ChatWidget } from "./components/chat-widget";
 
 const demoConfig = {
   publicKey: "ORGu8Sd5OK0MWx6hrz8nHVMS0II3V0JK-hVH_145WHc",

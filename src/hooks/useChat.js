@@ -67,6 +67,7 @@ export function useChat(config) {
   const [isResponding, setIsResponding] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
+  const [onlineSupportCount, setOnlineSupportCount] = useState(0);
 
   const loadVisitorHistory = useCallback(async (visitorId, options = {}) => {
     const [visitorValue, sessionValues] = await Promise.all([
@@ -242,7 +243,12 @@ export function useChat(config) {
         if (config.debug) console.debug("[Argon] Socket event", payload);
         const data = payload.data ?? {};
 
-        if (payload.type === "message.created") {
+        if (payload.type === "presence.count") {
+          const count = Number(data.online_count);
+          if (Number.isFinite(count)) {
+            setOnlineSupportCount(Math.max(0, Math.floor(count)));
+          }
+        } else if (payload.type === "message.created") {
           const eventMessage = messageFromEvent(payload);
           if (!eventMessage?.id || typeof eventMessage.content !== "string") {
             if (config.debug) console.warn("[Argon] Malformed message.created event", payload);
@@ -325,6 +331,7 @@ export function useChat(config) {
     isResponding,
     isConnected,
     isEnded,
+    onlineSupportCount,
     remoteConfig,
     isConfigurationLoaded,
     visitor,

@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { resolveWidgetConfig } from "../config/widgetConfig";
 import { useChat } from "../hooks/useChat";
 import { CloseIcon } from "./icons";
-import { ChatScreen } from "./screens/ChatScreen";
-import { LeadFormScreen } from "./screens/LeadFormScreen";
-import { SessionListScreen } from "./screens/SessionListScreen";
-import { WidgetHeader } from "./WidgetHeader";
+import { ChatScreen } from "./screens/chat";
+import { LeadFormScreen } from "./screens/get-started";
+import { SessionListScreen } from "./screens/session-list";
 
 const SCREENS = Object.freeze({
   CHAT: "chat",
@@ -38,6 +37,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     isResponding,
     isConnected,
     isEnded,
+    onlineSupportCount,
     remoteConfig,
     isConfigurationLoaded,
     visitor,
@@ -63,8 +63,8 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
   );
   const canCollectLead = Boolean(
     config.leadConfig?.isEnabled &&
-      config.leadConfig?.autoCollect &&
-      leadFields.length,
+    config.leadConfig?.autoCollect &&
+    leadFields.length,
   );
   const isReady = isConfigurationLoaded && isVisitorLoaded;
   const hasReusableLead = Boolean(visitor?.lead_id);
@@ -79,7 +79,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     : null;
   const screen = hasConversation
     ? SCREENS.CHAT
-    : selectedScreen ?? initialScreen;
+    : (selectedScreen ?? initialScreen);
 
   useEffect(() => {
     if (
@@ -218,7 +218,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  const headerDescription = !isReady
+  const defaultHeaderDescription = !isReady
     ? "Loading…"
     : screen === SCREENS.SESSIONS
       ? "Choose a conversation"
@@ -229,9 +229,26 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
           : isStarting || !isConnected
             ? "Connecting…"
             : config.headerDescription;
+  const headerDescription =
+    onlineSupportCount > 0
+      ? `${onlineSupportCount} human support ${onlineSupportCount === 1 ? "agent" : "agents"} online`
+      : defaultHeaderDescription;
   const showBack = Boolean(
     isReady && screen !== SCREENS.SESSIONS && hasSessionHistory,
   );
+  const screenHeaderProps = {
+    title: config.name,
+    description: headerDescription,
+    showBack,
+    isBusy: isStarting || !isReady,
+    canDownload: hasConversation,
+    canViewSessions: hasSessionHistory || Boolean(visitor),
+    onBack: showSessionHistory,
+    onStartNew: handleStartNew,
+    onDownload: handleDownloadSession,
+    onViewSessions: showSessionHistory,
+  };
+  const baseHeaderProps = { ...screenHeaderProps, logo: config.logo };
 
   return (
     <section
@@ -249,22 +266,13 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
           role="dialog"
           aria-label={`${config.name} conversation`}
         >
-          <WidgetHeader
-            title={config.name}
-            description={headerDescription}
-            showBack={showBack}
-            showMenu={screen !== SCREENS.SESSIONS}
-            isBusy={isStarting || !isReady}
-            canDownload={hasConversation}
-            canViewSessions={hasSessionHistory || Boolean(visitor)}
-            onBack={showSessionHistory}
-            onStartNew={handleStartNew}
-            onDownload={handleDownloadSession}
-            onViewSessions={showSessionHistory}
-          />
-
           {!isReady || !screen ? (
-            <ChatScreen config={config} messages={[]} isLoading />
+            <ChatScreen
+              config={config}
+              headerProps={screenHeaderProps}
+              messages={[]}
+              isLoading
+            />
           ) : screen === SCREENS.LEAD_FORM ? (
             <LeadFormScreen
               config={{
@@ -273,12 +281,14 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
                   config.leadConfig.introMessage || config.welcomeMessage,
               }}
               fields={leadFields}
+              headerProps={baseHeaderProps}
               isSubmitting={isStarting}
               error={leadError}
               onSubmit={handleLeadSubmit}
             />
           ) : screen === SCREENS.SESSIONS ? (
             <SessionListScreen
+              headerProps={baseHeaderProps}
               visitor={visitor}
               sessions={visitorSessions}
               isLoading={isStarting}
@@ -289,6 +299,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
           ) : (
             <ChatScreen
               config={config}
+              headerProps={screenHeaderProps}
               messages={messages}
               isLoading={isStarting && !hasConversation}
               isSending={isSending}
