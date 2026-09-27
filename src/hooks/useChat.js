@@ -13,14 +13,42 @@ import {
 } from "../lib/visitor";
 
 function normalizeMessage(message) {
-  const senderType = message.sender_type ?? message.sender;
+  const senderType = String(
+    message.sender_type ?? message.sender?.type ?? message.sender ?? "ai",
+  ).toLowerCase();
+  const senderDetails =
+    message.sender && typeof message.sender === "object" ? message.sender : {};
+  const isVisitor = senderType === "visitor";
+  const isSystem = senderType === "system";
+  const isAi = ["ai", "assistant", "bot", "chatbot"].includes(senderType);
+  const sender = isVisitor
+    ? "visitor"
+    : isSystem
+      ? "system"
+      : isAi
+        ? "ai"
+        : "support";
+
   return {
     id: message.id,
     externalId: message.external_id || "",
     content: message.content,
-    sender: senderType === "visitor" ? "visitor" : senderType === "system" ? "system" : "bot",
-    senderName: message.sender?.name || "",
-    senderAvatar: message.sender?.avatar || "",
+    sender,
+    senderName:
+      senderDetails.name ||
+      senderDetails.display_name ||
+      message.sender_name ||
+      message.metadata?.agent_name ||
+      (typeof message.sender === "string" && !isAi
+        ? message.sender
+        : ""),
+    senderAvatar:
+      senderDetails.avatar ||
+      senderDetails.avatar_url ||
+      message.sender_avatar ||
+      message.metadata?.agent_avatar ||
+      "",
+    status: message.status || "",
     createdAt: message.created_at,
     pending: false,
   };
@@ -301,6 +329,8 @@ export function useChat(config) {
       externalId: clientMessageId,
       content: text,
       sender: "visitor",
+      status: "sending",
+      createdAt: new Date().toISOString(),
       pending: true,
     }]);
     setIsSending(true);

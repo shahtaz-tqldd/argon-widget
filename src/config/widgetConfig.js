@@ -5,6 +5,7 @@ export const defaultWidgetConfig = Object.freeze({
   socketUrl: env.VITE_APP_SOCKET_URL || "http://localhost:8008",
   publicKey: "",
   name: "Support",
+  chatbotName: "",
   headerDescription: "Typically replies instantly",
   welcomeMessage: "Hi! How can we help you today?",
   placeholder: "Write a message…",
@@ -48,6 +49,7 @@ export function mapPublicConfiguration(data) {
   const leadConfig = data?.lead_config ?? {};
   return {
     name: settings.header_title || data?.chatbot_name,
+    chatbotName: data?.chatbot_name,
     headerDescription: settings.header_description,
     welcomeMessage: data?.welcome_message,
     primaryColor: settings.primary_color,

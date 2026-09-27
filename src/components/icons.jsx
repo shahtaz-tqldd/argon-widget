@@ -67,6 +67,15 @@ export function MenuIcon() {
   );
 }
 
+export function SessionMessageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 15a3 3 0 0 1-3 3H9l-5 3v-6a3 3 0 0 1-1-2.2V7a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3v8Z" />
+      <path d="M7.5 9h9M7.5 13h5.5" />
+    </svg>
+  );
+}
+
 export function SendIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">

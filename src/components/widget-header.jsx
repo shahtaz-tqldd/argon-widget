@@ -117,7 +117,7 @@ export function ChatHeader({
   ...actionProps
 }) {
   return (
-    <header className="argon-header argon-chat-header">
+    <header className="argon-header argon-base-header">
       {showBack && <BackButton {...actionProps} />}
       <HeaderCopy title={title} description={description} />
       {showMenu && <HeaderMenu {...actionProps} />}

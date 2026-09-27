@@ -56,13 +56,28 @@
   border: 0;
   border-radius: 50%;
   color: #fff;
-  background: var(--argon-primary);
+  background: transparent;
   box-shadow: 0 14px 35px
     color-mix(in srgb, var(--argon-primary) 35%, transparent);
   cursor: pointer;
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease;
+}
+.argon-launcher--close {
+  background: var(--argon-primary);
+}
+.argon-launcher--avatar {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  box-shadow: none;
+}
+.argon-launcher.argon-launcher--avatar:hover {
+  box-shadow: none;
 }
 .argon-widget--left .argon-launcher {
   margin-left: 0;
@@ -87,6 +102,51 @@
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.argon-chatbot-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+}
+.argon-chatbot-avatar--xs {
+  width: 24px;
+  height: 24px;
+}
+.argon-chatbot-avatar--sm {
+  width: 32px;
+  height: 32px;
+}
+.argon-chatbot-avatar--md {
+  width: 40px;
+  height: 40px;
+}
+.argon-chatbot-avatar--lg {
+  width: 48px;
+  height: 48px;
+}
+.argon-chatbot-avatar--xl {
+  width: 56px;
+  height: 56px;
+}
+.argon-chatbot-avatar--fallback {
+  padding: 8px;
+  background: #3A86FF;
+}
+.argon-chatbot-avatar--fallback.argon-chatbot-avatar--xs,
+.argon-chatbot-avatar--fallback.argon-chatbot-avatar--sm {
+  padding: 4px;
+}
+.argon-chatbot-avatar--fallback.argon-chatbot-avatar--md,
+.argon-chatbot-avatar--fallback.argon-chatbot-avatar--lg {
+  padding: 6px;
+}
+.argon-chatbot-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
 }
 .argon-panel {
   width: min(380px, calc(100vw - 32px));
@@ -285,12 +345,84 @@
 .argon-messages {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   overflow-y: auto;
-  padding: 22px 17px;
+  padding: 18px 17px 22px;
   background: var(--argon-secondary, #f7f8fb);
   scrollbar-width: thin;
   scrollbar-color: #d7dae3 transparent;
+}
+.argon-message-entry {
+  display: contents;
+}
+.argon-message-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  color: #8b91a0;
+  font-size: 10px;
+  font-weight: 650;
+  text-align: center;
+}
+.argon-message-date::before,
+.argon-message-date::after {
+  height: 1px;
+  flex: 1;
+  background: #dfe2e9;
+  content: "";
+}
+.argon-message-date span {
+  flex: 0 0 auto;
+}
+.argon-message-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.argon-message-row--visitor {
+  align-items: flex-end;
+}
+.argon-message-row--continuation {
+  margin-top: -3px;
+}
+.argon-message-sender {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  margin: 2px 4px 0;
+  color: #555d6d;
+}
+.argon-message-sender strong {
+  overflow: hidden;
+  max-width: 230px;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argon-message-avatar {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--argon-primary);
+  font-size: 8px;
+  font-weight: 750;
+}
+.argon-message-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .argon-message {
   max-width: 82%;
@@ -299,11 +431,17 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.argon-message--bot {
+.argon-message--ai,
+.argon-message--bot,
+.argon-message--support {
   align-self: flex-start;
   border-bottom-left-radius: 4px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(21, 29, 46, 0.06);
+}
+.argon-message--support {
+  border-left: 2px solid
+    color-mix(in srgb, var(--argon-primary) 55%, transparent);
 }
 .argon-message--visitor {
   align-self: flex-end;
@@ -311,12 +449,28 @@
   color: #fff;
   background: var(--argon-primary);
 }
+.argon-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: #8b91a0;
+  font-size: 9px;
+  line-height: 1.25;
+}
+.argon-message-row--visitor .argon-message-meta {
+  justify-content: flex-end;
+}
 .argon-message--system {
   align-self: center;
   max-width: 94%;
-  color: #8a4b2c;
-  background: #fff2e8;
-  font-size: 12px;
+  margin: 4px auto;
+  padding: 7px 11px;
+  color: #6f7583;
+  background: color-mix(in srgb, #8d94a3 10%, transparent);
+  box-shadow: none;
+  font-size: 11px;
+  line-height: 1.4;
   text-align: center;
 }
 .argon-session-home {
@@ -348,12 +502,11 @@
 .argon-session-card {
   width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px;
   border: 1px solid #e1e4eb;
-  border-radius: 13px;
+  border-radius: 14px;
   color: #1b2130;
   background: #fff;
   text-align: left;
@@ -369,36 +522,87 @@
   transform: translateY(-1px);
 }
 .argon-session-card:disabled {
-  opacity: 0.62;
   cursor: default;
+}
+.argon-session-message-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 18px;
+  color: var(--argon-primary);
+  background: color-mix(in srgb, var(--argon-primary) 11%, #fff);
+}
+.argon-session-message-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .argon-session-card-copy {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  flex: 1;
+  gap: 5px;
 }
-.argon-session-card-copy span {
+.argon-session-card-topline {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.argon-session-card-topline strong {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.argon-session-card-copy small {
+.argon-session-preview {
+  display: -webkit-box;
   overflow: hidden;
-  color: #7b8190;
-  font-size: 11px;
-  text-overflow: ellipsis;
+  color: #4e5565;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.argon-session-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #858b98;
+  font-size: 10px;
   white-space: nowrap;
+}
+.argon-session-meta > span:not(.argon-session-id),
+.argon-session-meta time {
+  flex: 0 0 auto;
+}
+.argon-session-id {
+  overflow: hidden;
+  color: #676e7d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-overflow: ellipsis;
 }
 .argon-session-status {
   flex: 0 0 auto;
-  padding: 4px 7px;
+  padding: 3px 7px;
   border-radius: 999px;
   color: var(--argon-primary);
   background: color-mix(in srgb, var(--argon-primary) 11%, #fff);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: capitalize;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  text-transform: uppercase;
 }
 .argon-session-status--resolved,
 .argon-session-status--closed {
@@ -692,7 +896,9 @@
   background: #101217;
 }
 .argon-widget--dark .argon-session-heading span,
-.argon-widget--dark .argon-session-card-copy small,
+.argon-widget--dark .argon-session-preview,
+.argon-widget--dark .argon-session-meta,
+.argon-widget--dark .argon-session-id,
 .argon-widget--dark .argon-start-error > span {
   color: #aeb3bf;
 }
@@ -700,6 +906,9 @@
   color: #f5f6f8;
   border-color: #353a45;
   background: #252932;
+}
+.argon-widget--dark .argon-session-message-icon {
+  background: color-mix(in srgb, var(--argon-primary) 18%, #252932);
 }
 .argon-widget--dark .argon-session-status {
   background: color-mix(in srgb, var(--argon-primary) 20%, #252932);
@@ -725,8 +934,23 @@
 .argon-widget--dark .argon-consent {
   color: #c2c6d0;
 }
+.argon-widget--dark .argon-message--ai,
 .argon-widget--dark .argon-message--bot,
+.argon-widget--dark .argon-message--support,
 .argon-widget--dark .argon-typing {
+  background: #252932;
+}
+.argon-widget--dark .argon-message-date,
+.argon-widget--dark .argon-message-meta,
+.argon-widget--dark .argon-message-sender {
+  color: #aeb3bf;
+}
+.argon-widget--dark .argon-message-date::before,
+.argon-widget--dark .argon-message-date::after {
+  background: #353a45;
+}
+.argon-widget--dark .argon-message--system {
+  color: #b8bdc8;
   background: #252932;
 }
 .argon-widget--dark .argon-composer {

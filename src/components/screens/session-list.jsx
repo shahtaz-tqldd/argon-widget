@@ -1,3 +1,4 @@
+import { SessionMessageIcon } from "../icons";
 import { BaseHeader } from "../widget-header";
 
 function formatSessionDate(value, now = Date.now()) {
@@ -23,6 +24,33 @@ function formatSessionDate(value, now = Date.now()) {
 
   const elapsedYears = Math.floor(elapsedDays / 365);
   return `${elapsedYears}y ago`;
+}
+
+function getSessionDetails(session) {
+  const lastMessage = session.last_message ?? {};
+  const activityDate =
+    lastMessage.created_at || session.last_activity_at || session.created_at;
+  const messageCount = Number(session.message_count);
+
+  return {
+    sender:
+      typeof lastMessage.sender === "string" && lastMessage.sender.trim()
+        ? lastMessage.sender.trim()
+        : "Conversation",
+    preview:
+      typeof lastMessage.content === "string" && lastMessage.content.trim()
+        ? lastMessage.content.trim()
+        : "No messages yet",
+    activityDate,
+    activityLabel: formatSessionDate(activityDate),
+    messageCount: Number.isFinite(messageCount)
+      ? Math.max(0, Math.floor(messageCount))
+      : 0,
+    shortId: String(session.id || "")
+      .slice(0, 8)
+      .toUpperCase(),
+    status: String(session.status || "unknown").toLowerCase(),
+  };
 }
 
 export function SessionListScreen({
@@ -51,13 +79,16 @@ export function SessionListScreen({
           disabled={isLoading}
           onClick={onStartNew}
         >
-          {isLoading ? "Opening…" : "Start a new conversation"}
+          {isLoading ? "Opening..." : "Start a new conversation"}
         </button>
         <div className="argon-session-list">
           {sessions.map((session) => {
             const canResume = Boolean(
               session.status === "open" && session.conversationToken,
             );
+            const details = getSessionDetails(session);
+            const messageLabel = `${details.messageCount} ${details.messageCount === 1 ? "message" : "messages"}`;
+
             return (
               <button
                 key={session.id}
@@ -65,33 +96,39 @@ export function SessionListScreen({
                 className="argon-session-card"
                 disabled={!canResume || isLoading}
                 onClick={() => onResume(session)}
+                aria-label={
+                  canResume
+                    ? `Continue session ${details.shortId} with ${details.sender}`
+                    : `Session ${details.shortId}, ${details.status}`
+                }
               >
-                <span className="argon-session-card-copy">
-                  <div>
-                    {session.last_message?.sender && (
-                      <span>
-                        {session.last_message?.sender?.split(" ")[0]}:{" "}
-                      </span>
-                    )}
-                    {session.last_message?.content ? (
-                      <span className="opacity-75">
-                        {session.last_message?.content?.trim()}
-                      </span>
-                    ) : (
-                      <span className="opacity-60">No Message yet</span>
-                    )}
-                  </div>
-                  <small>
-                    {formatSessionDate(
-                      session.last_activity_at || session.created_at,
-                    )}
-                  </small>
+                <span className="argon-session-message-icon" aria-hidden="true">
+                  <SessionMessageIcon />
                 </span>
-                {/* <span
-                  className={`argon-session-status argon-session-status--${session.status}`}
-                >
-                  {canResume ? "Continue" : session.status}
-                </span> */}
+                <span className="argon-session-card-copy">
+                  <span className="argon-session-card-topline">
+                    <strong title={details.sender}>{details.sender}</strong>
+                    <span
+                      className={`argon-session-status argon-session-status--${details.status}`}
+                    >
+                      {details.status}
+                    </span>
+                  </span>
+                  <span className="argon-session-preview">
+                    {details.preview}
+                  </span>
+                  <span className="argon-session-meta">
+                    {details.activityLabel && (
+                      <>
+                        <time dateTime={details.activityDate}>
+                          {details.activityLabel}
+                        </time>
+                        <span aria-hidden="true">&bull;</span>
+                      </>
+                    )}
+                    <span>{messageLabel}</span>
+                  </span>
+                </span>
               </button>
             );
           })}

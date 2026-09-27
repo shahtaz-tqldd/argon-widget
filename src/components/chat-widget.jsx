@@ -5,6 +5,7 @@ import { CloseIcon } from "./icons";
 import { ChatScreen } from "./screens/chat";
 import { LeadFormScreen } from "./screens/get-started";
 import { SessionListScreen } from "./screens/session-list";
+import { ChatbotAvatar } from "./ui/avatar";
 
 const SCREENS = Object.freeze({
   CHAT: "chat",
@@ -324,7 +325,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
         )}
         <button
           type="button"
-          className="argon-launcher"
+          className={isOpen ? "argon-launcher argon-launcher--close" : "argon-launcher argon-launcher--avatar"}
           onClick={toggleChat}
           aria-label={isOpen ? "Close chat" : "Open chat"}
           aria-expanded={isOpen}
@@ -332,11 +333,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
           {isOpen ? (
             <CloseIcon />
           ) : (
-            <img
-              src="/logo-dark.png"
-              alt="Logo"
-              style={{ width: "40px", height: "40px" }}
-            />
+            <ChatbotAvatar chatbot={config} size="xl" alt="" />
           )}
         </button>
       </div>
