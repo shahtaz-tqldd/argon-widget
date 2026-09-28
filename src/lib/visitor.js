@@ -10,6 +10,24 @@ export function createClientMessageId() {
   return createId();
 }
 
+export function getOrCreateVisitorId(publicKey) {
+  const existingVisitorId = getVisitorRecord(publicKey)?.visitorId;
+  if (existingVisitorId) return existingVisitorId;
+
+  const visitorId = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID().replaceAll("-", "")
+    : createId();
+  try {
+    localStorage.setItem(
+      `${VISITOR_STORAGE_PREFIX}:${publicKey}`,
+      JSON.stringify({ visitorId, tokens: {} }),
+    );
+  } catch {
+    // Keep the in-memory ID when storage is unavailable.
+  }
+  return visitorId;
+}
+
 export function getConversationToken(publicKey) {
   try {
     return localStorage.getItem(`${STORAGE_PREFIX}:${publicKey}`) || "";

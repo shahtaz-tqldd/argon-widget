@@ -6,6 +6,7 @@ import {
   clearConversationToken,
   createClientMessageId,
   getConversationToken,
+  getOrCreateVisitorId,
   getSessionToken,
   getVisitorRecord,
   saveConversationToken,
@@ -79,8 +80,33 @@ function fallbackWebsocketUrl(config, sessionId, token) {
   return `${baseUrl}/ws/widget/chatbots/${publicKey}/conversations/${sessionId}/?token=${encodeURIComponent(token)}`;
 }
 
+function normalizeSession(config, session) {
+  const conversationToken =
+    session.conversation_token ||
+    session.conversationToken ||
+    getSessionToken(config.publicKey, session.id);
+
+  return {
+    ...session,
+    conversationToken,
+    websocketUrl:
+      session.websocket_url ||
+      session.websocketUrl ||
+      (conversationToken
+        ? fallbackWebsocketUrl(config, session.id, conversationToken)
+        : ""),
+  };
+}
+
 export function useChat(config) {
-  const api = useMemo(() => createWidgetApi(config), [config]);
+  const visitorId = useMemo(
+    () => getOrCreateVisitorId(config.publicKey),
+    [config.publicKey],
+  );
+  const api = useMemo(
+    () => createWidgetApi(config, visitorId),
+    [config, visitorId],
+  );
   const conversationRef = useRef(null);
   const startPromiseRef = useRef(null);
   const [remoteConfig, setRemoteConfig] = useState(null);
@@ -103,16 +129,11 @@ export function useChat(config) {
       api.getVisitorSessions(visitorId, options),
     ]);
     setVisitor(visitorValue);
-    setVisitorSessions(
-      (Array.isArray(sessionValues) ? sessionValues : []).map((session) => ({
-        ...session,
-        conversationToken:
-          session.conversation_token ||
-          getSessionToken(config.publicKey, session.id),
-      })),
-    );
-    return { visitor: visitorValue, sessions: sessionValues };
-  }, [api, config.publicKey]);
+    const sessions = (Array.isArray(sessionValues) ? sessionValues : [])
+      .map((session) => normalizeSession(config, session));
+    setVisitorSessions(sessions);
+    return { visitor: visitorValue, sessions };
+  }, [api, config]);
 
   useEffect(() => {
     if (!config.publicKey) return undefined;
@@ -169,6 +190,7 @@ export function useChat(config) {
 
   const start = useCallback(async ({
     conversationToken = null,
+    session = null,
     leadData,
     leadId,
     forceNew = false,
@@ -183,6 +205,37 @@ export function useChat(config) {
       const storedToken = forceNew
         ? ""
         : conversationToken || getConversationToken(config.publicKey);
+      const selectedSession = session
+        ? normalizeSession(config, session)
+        : visitorSessions.find((item) => item.conversationToken === storedToken);
+
+      if (storedToken && selectedSession) {
+        try {
+          const history = await api.getConversationMessages(storedToken);
+          const visitorId = getVisitorRecord(config.publicKey)?.visitorId || "";
+          const value = {
+            sessionId: selectedSession.id,
+            token: storedToken,
+            websocketUrl:
+              selectedSession.websocketUrl ||
+              fallbackWebsocketUrl(config, selectedSession.id, storedToken),
+            status: selectedSession.status,
+            visitorId,
+          };
+          saveConversationToken(config.publicKey, value.token);
+          saveVisitorConversation(config.publicKey, value);
+          conversationRef.current = value;
+          setConversation(value);
+          setIsEnded(["resolved", "closed"].includes(value.status));
+          setMessages((Array.isArray(history) ? history : []).map(normalizeMessage));
+          return value;
+        } catch (error) {
+          if (!(error instanceof ApiError) || error.status !== 401) throw error;
+          clearConversationToken(config.publicKey, storedToken);
+          throw error;
+        }
+      }
+
       let bootstrap;
       try {
         bootstrap = await api.startConversation({
@@ -228,7 +281,7 @@ export function useChat(config) {
       startPromiseRef.current = null;
       setIsStarting(false);
     }
-  }, [api, config, loadVisitorHistory]);
+  }, [api, config, loadVisitorHistory, visitorSessions]);
 
   const leaveConversation = useCallback(() => {
     conversationRef.current = null;

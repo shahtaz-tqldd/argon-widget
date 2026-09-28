@@ -138,7 +138,10 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     if (!session.conversationToken || session.status !== "open") return;
     setSessionError("");
     try {
-      await start({ conversationToken: session.conversationToken });
+      await start({
+        conversationToken: session.conversationToken,
+        session,
+      });
       setScreen(SCREENS.CHAT);
     } catch (error) {
       setSessionError(

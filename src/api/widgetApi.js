@@ -23,9 +23,13 @@ async function detectUserMetadata() {
 
   const addressParts = [result?.city, result?.region]
     .map(cleanString)
-    .filter((value, index, values) => (
-      value && values.findIndex((item) => item.toLowerCase() === value.toLowerCase()) === index
-    ));
+    .filter(
+      (value, index, values) =>
+        value &&
+        values.findIndex(
+          (item) => item.toLowerCase() === value.toLowerCase(),
+        ) === index,
+    );
   const values = {
     ip: cleanString(result?.ip),
     detected_address: addressParts.join(", "),
@@ -37,7 +41,11 @@ async function detectUserMetadata() {
   );
 }
 
-export function createWidgetApi(config) {
+export function createWidgetApi(config, visitorId) {
+  const visitorSessionsUrl = chatbotEndpoint(
+    config,
+    `visitors/${encodeURIComponent(visitorId)}/sessions/`,
+  );
   const conversationUrl = chatbotEndpoint(config, "conversations/");
   let detectedUserMetadata = null;
   let userMetadataPromise = null;
@@ -77,6 +85,21 @@ export function createWidgetApi(config) {
       );
     },
 
+    async getConversationMessages(
+      conversationToken,
+      { page = 1, pageSize = 20, ...options } = {},
+    ) {
+      const query = new URLSearchParams({
+        conversation_token: conversationToken,
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      return request(`${conversationUrl}?${query}`, {
+        method: "GET",
+        ...options,
+      });
+    },
+
     async startConversation(
       { conversationToken = "", leadData, leadId } = {},
       options = {},
@@ -86,19 +109,20 @@ export function createWidgetApi(config) {
       const includedUserMetadata = isNewConversation
         ? detectedUserMetadata
         : null;
-      const bootstrap = await request(conversationUrl, {
+      const bootstrap = await request(visitorSessionsUrl, {
         method: "POST",
         ...options,
         body: conversationToken
           ? {
-            conversation_token: conversationToken,
-            ...(leadData ? { lead_data: leadData } : {}),
-            ...(leadId ? { lead_id: leadId } : {}),
-          }
-        : {
-            ...(leadData ? { lead_data: leadData } : {}),
-            ...(leadId ? { lead_id: leadId } : {}),
-              ...(includedUserMetadata && Object.keys(includedUserMetadata).length
+              conversation_token: conversationToken,
+              ...(leadData ? { lead_data: leadData } : {}),
+              ...(leadId ? { lead_id: leadId } : {}),
+            }
+          : {
+              ...(leadData ? { lead_data: leadData } : {}),
+              ...(leadId ? { lead_id: leadId } : {}),
+              ...(includedUserMetadata &&
+              Object.keys(includedUserMetadata).length
                 ? { user_metadata: includedUserMetadata }
                 : {}),
               metadata: {
@@ -107,24 +131,6 @@ export function createWidgetApi(config) {
               },
             },
       });
-
-      if (
-        isNewConversation &&
-        !bootstrap.resumed &&
-        !includedUserMetadata &&
-        bootstrap.conversation_token
-      ) {
-        void loadUserMetadata().then((userMetadata) => {
-          if (!Object.keys(userMetadata).length) return undefined;
-          return request(conversationUrl, {
-            method: "POST",
-            body: {
-              conversation_token: bootstrap.conversation_token,
-              user_metadata: userMetadata,
-            },
-          });
-        }).catch(() => {});
-      }
 
       return bootstrap;
     },
