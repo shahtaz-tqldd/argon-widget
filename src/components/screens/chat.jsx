@@ -273,6 +273,7 @@ export function ChatScreen({
           <textarea
             id="argon-message"
             rows="1"
+            maxLength={10000}
             value={draft}
             disabled={isEnded}
             placeholder={

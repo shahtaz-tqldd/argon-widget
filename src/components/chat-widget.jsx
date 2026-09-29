@@ -15,11 +15,12 @@ const SCREENS = Object.freeze({
 
 function chooseInitialScreen({
   sessions,
+  hasExistingVisitor,
   canCollectLead,
   hasReusableLead,
   hasStoredConversation,
 }) {
-  if (sessions.length) return SCREENS.SESSIONS;
+  if (hasExistingVisitor || sessions.length) return SCREENS.SESSIONS;
   if (canCollectLead && !hasReusableLead && !hasStoredConversation) {
     return SCREENS.LEAD_FORM;
   }
@@ -44,6 +45,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     visitor,
     visitorSessions,
     isVisitorLoaded,
+    hasStoredVisitor,
     hasStoredConversation,
     hasConversation,
     conversation,
@@ -73,6 +75,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
   const initialScreen = isReady
     ? chooseInitialScreen({
         sessions: visitorSessions,
+        hasExistingVisitor: hasStoredVisitor,
         canCollectLead,
         hasReusableLead,
         hasStoredConversation,
@@ -94,12 +97,17 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
       return;
     }
 
-    const resumeLegacyConversation =
-      startMode === "initial" && hasStoredConversation && !visitor;
+    const resumeStoredConversation =
+      startMode === "initial" && hasStoredConversation;
     start(
-      resumeLegacyConversation
+      resumeStoredConversation
         ? undefined
-        : { forceNew: true, leadId: visitor?.lead_id },
+        : {
+            forceNew: true,
+            ...(startMode === "new" && visitor?.lead_data
+              ? { leadData: visitor.lead_data }
+              : {}),
+          },
     ).catch((error) => {
       setSessionError(
         error.message || "The conversation could not be started.",
@@ -135,7 +143,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
   }
 
   async function handleResumeSession(session) {
-    if (!session.conversationToken || session.status !== "open") return;
+    if (!session.conversationToken) return;
     setSessionError("");
     try {
       await start({
@@ -246,7 +254,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     showBack,
     isBusy: isStarting || !isReady,
     canDownload: hasConversation,
-    canViewSessions: hasSessionHistory || Boolean(visitor),
+    canViewSessions: hasSessionHistory,
     onBack: showSessionHistory,
     onStartNew: handleStartNew,
     onDownload: handleDownloadSession,

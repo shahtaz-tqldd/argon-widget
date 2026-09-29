@@ -58,10 +58,12 @@ value is shipped to the browser.
 ## Conversation lifecycle
 
 The widget fetches public configuration using the script's `data-chatbot` key.
-Opening it creates or resumes a conversation and connects to the WebSocket URL
-returned by the backend. The signed 30-day conversation token is kept in browser
-storage under a key scoped to that chatbot. Messages are submitted over REST
-with the bearer token; AI and agent responses arrive through WebSocket events.
+Opening it creates or resumes a conversation and connects to the exact WebSocket
+URL returned by the backend. The visitor ID is stored in a cookie scoped to the
+chatbot. Signed conversation tokens remain in browser storage so returning
+visitors can resume sessions from the session-list screen. Messages are
+submitted over REST with the bearer token; AI and agent responses arrive through
+WebSocket events.
 
 ## Structure
 

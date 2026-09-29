@@ -82,10 +82,11 @@ export function SessionListScreen({
           {isLoading ? "Opening..." : "Start a new conversation"}
         </button>
         <div className="argon-session-list">
+          {!sessions.length && !isLoading && (
+            <p className="argon-session-empty">No conversations yet.</p>
+          )}
           {sessions.map((session) => {
-            const canResume = Boolean(
-              session.status === "open" && session.conversationToken,
-            );
+            const canOpen = Boolean(session.conversationToken);
             const details = getSessionDetails(session);
             const messageLabel = `${details.messageCount} ${details.messageCount === 1 ? "message" : "messages"}`;
 
@@ -94,11 +95,11 @@ export function SessionListScreen({
                 key={session.id}
                 type="button"
                 className="argon-session-card"
-                disabled={!canResume || isLoading}
+                disabled={!canOpen || isLoading}
                 onClick={() => onResume(session)}
                 aria-label={
-                  canResume
-                    ? `Continue session ${details.shortId} with ${details.sender}`
+                  canOpen
+                    ? `Open session ${details.shortId} with ${details.sender}`
                     : `Session ${details.shortId}, ${details.status}`
                 }
               >

@@ -55,6 +55,25 @@ function normalizeMessage(message) {
   };
 }
 
+function messagesFromPage(response) {
+  const values = Array.isArray(response)
+    ? response
+    : response?.results ?? response?.messages ?? response?.items ?? [];
+
+  return values
+    .filter(
+      (message) =>
+        message?.id && typeof message.content === "string",
+    )
+    .map(normalizeMessage)
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.createdAt || "");
+      const rightTime = Date.parse(right.createdAt || "");
+      if (!Number.isFinite(leftTime) || !Number.isFinite(rightTime)) return 0;
+      return leftTime - rightTime;
+    });
+}
+
 function messageFromEvent(payload) {
   return payload?.data?.message ?? payload?.message ?? payload?.data ?? null;
 }
@@ -80,6 +99,27 @@ function fallbackWebsocketUrl(config, sessionId, token) {
   return `${baseUrl}/ws/widget/chatbots/${publicKey}/conversations/${sessionId}/?token=${encodeURIComponent(token)}`;
 }
 
+function conversationFromBootstrap(config, bootstrap, visitorId) {
+  const session = bootstrap.session ?? {};
+  const token = bootstrap.conversation_token;
+  if (!session.id || !token) {
+    throw new Error("The conversation response is missing a session or token.");
+  }
+  return {
+    sessionId: session.id,
+    token,
+    websocketUrl:
+      bootstrap.websocket_url ||
+      fallbackWebsocketUrl(config, session.id, token),
+    status: session.status,
+    visitorId:
+      bootstrap.visitor?.visitor_id ||
+      bootstrap.visitor?.id ||
+      session.visitor_id ||
+      visitorId,
+  };
+}
+
 function normalizeSession(config, session) {
   const conversationToken =
     session.conversation_token ||
@@ -88,6 +128,7 @@ function normalizeSession(config, session) {
 
   return {
     ...session,
+    status: String(session.status || "unknown").toLowerCase(),
     conversationToken,
     websocketUrl:
       session.websocket_url ||
@@ -123,14 +164,18 @@ export function useChat(config) {
   const [isEnded, setIsEnded] = useState(false);
   const [onlineSupportCount, setOnlineSupportCount] = useState(0);
 
-  const loadVisitorHistory = useCallback(async (visitorId, options = {}) => {
-    const [visitorValue, sessionValues] = await Promise.all([
-      api.getVisitor(visitorId, options),
-      api.getVisitorSessions(visitorId, options),
+  const loadVisitorHistory = useCallback(async (_visitorId, options = {}) => {
+    const [visitorValue, sessionResponse] = await Promise.all([
+      api.getVisitorDetails(options),
+      api.getVisitorSessions(options),
     ]);
+    const sessionValues = Array.isArray(sessionResponse)
+      ? sessionResponse
+      : sessionResponse?.results ?? sessionResponse?.sessions ?? [];
+    const sessions = sessionValues.map((session) =>
+      normalizeSession(config, session),
+    );
     setVisitor(visitorValue);
-    const sessions = (Array.isArray(sessionValues) ? sessionValues : [])
-      .map((session) => normalizeSession(config, session));
     setVisitorSessions(sessions);
     return { visitor: visitorValue, sessions };
   }, [api, config]);
@@ -192,7 +237,6 @@ export function useChat(config) {
     conversationToken = null,
     session = null,
     leadData,
-    leadId,
     forceNew = false,
   } = {}) => {
     if (conversationRef.current) return conversationRef.current;
@@ -205,35 +249,24 @@ export function useChat(config) {
       const storedToken = forceNew
         ? ""
         : conversationToken || getConversationToken(config.publicKey);
-      const selectedSession = session
-        ? normalizeSession(config, session)
-        : visitorSessions.find((item) => item.conversationToken === storedToken);
-
-      if (storedToken && selectedSession) {
-        try {
-          const history = await api.getConversationMessages(storedToken);
-          const visitorId = getVisitorRecord(config.publicKey)?.visitorId || "";
-          const value = {
-            sessionId: selectedSession.id,
-            token: storedToken,
-            websocketUrl:
-              selectedSession.websocketUrl ||
-              fallbackWebsocketUrl(config, selectedSession.id, storedToken),
-            status: selectedSession.status,
-            visitorId,
-          };
-          saveConversationToken(config.publicKey, value.token);
-          saveVisitorConversation(config.publicKey, value);
-          conversationRef.current = value;
-          setConversation(value);
-          setIsEnded(["resolved", "closed"].includes(value.status));
-          setMessages((Array.isArray(history) ? history : []).map(normalizeMessage));
-          return value;
-        } catch (error) {
-          if (!(error instanceof ApiError) || error.status !== 401) throw error;
-          clearConversationToken(config.publicKey, storedToken);
-          throw error;
-        }
+      if (session?.status === "closed" && storedToken) {
+        const value = {
+          sessionId: session.id,
+          token: storedToken,
+          websocketUrl: session.websocketUrl || "",
+          status: "closed",
+          visitorId,
+        };
+        const history = await api.getConversationMessages({
+          sessionId: value.sessionId,
+          conversationToken: value.token,
+        });
+        saveVisitorConversation(config.publicKey, value);
+        conversationRef.current = value;
+        setConversation(value);
+        setIsEnded(true);
+        setMessages(messagesFromPage(history));
+        return value;
       }
 
       let bootstrap;
@@ -241,32 +274,31 @@ export function useChat(config) {
         bootstrap = await api.startConversation({
           conversationToken: storedToken,
           leadData,
-          leadId,
         });
       } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 401 || !storedToken) throw error;
         clearConversationToken(config.publicKey, storedToken);
         if (explicitlySelected) throw error;
-        bootstrap = await api.startConversation({ leadData, leadId });
+        bootstrap = await api.startConversation({ leadData });
       }
 
-      const value = {
-        sessionId: bootstrap.session.id,
-        token: bootstrap.conversation_token,
-        websocketUrl: bootstrap.websocket_url || fallbackWebsocketUrl(
-          config,
-          bootstrap.session.id,
-          bootstrap.conversation_token,
-        ),
-        status: bootstrap.session.status,
-        visitorId: bootstrap.session.visitor_id,
-      };
+      const value = conversationFromBootstrap(config, bootstrap, visitorId);
+      const history = session
+        ? await api.getConversationMessages({
+            sessionId: value.sessionId,
+            conversationToken: value.token,
+          })
+        : bootstrap.messages ?? [];
       saveConversationToken(config.publicKey, value.token);
       saveVisitorConversation(config.publicKey, value);
       conversationRef.current = value;
       setConversation(value);
-      setIsEnded(["resolved", "closed"].includes(value.status));
-      setMessages((bootstrap.messages ?? []).map(normalizeMessage));
+      setIsEnded(value.status === "closed");
+      setMessages(
+        session
+          ? messagesFromPage(history)
+          : history.map(normalizeMessage),
+      );
       void loadVisitorHistory(value.visitorId).catch((error) => {
         if (config.debug) {
           console.warn("[Argon] Visitor history could not be refreshed", error);
@@ -281,7 +313,7 @@ export function useChat(config) {
       startPromiseRef.current = null;
       setIsStarting(false);
     }
-  }, [api, config, loadVisitorHistory, visitorSessions]);
+  }, [api, config, loadVisitorHistory, visitorId]);
 
   const leaveConversation = useCallback(() => {
     conversationRef.current = null;
@@ -292,6 +324,33 @@ export function useChat(config) {
     setIsConnected(false);
     setIsEnded(false);
   }, []);
+
+  const refreshConversation = useCallback(async () => {
+    const current = conversationRef.current;
+    if (!current) return null;
+
+    let bootstrap;
+    try {
+      bootstrap = await api.startConversation({
+        conversationToken: current.token,
+      });
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      clearConversationToken(config.publicKey, current.token);
+      bootstrap = await api.startConversation();
+    }
+
+    const value = conversationFromBootstrap(config, bootstrap, visitorId);
+    saveConversationToken(config.publicKey, value.token);
+    saveVisitorConversation(config.publicKey, value);
+    conversationRef.current = value;
+    setConversation(value);
+    setIsEnded(value.status === "closed");
+    if (value.sessionId !== current.sessionId) {
+      setMessages((bootstrap.messages ?? []).map(normalizeMessage));
+    }
+    return value;
+  }, [api, config, visitorId]);
 
   useEffect(() => {
     if (!conversation?.websocketUrl || isEnded) return undefined;
@@ -324,7 +383,13 @@ export function useChat(config) {
         if (config.debug) console.debug("[Argon] Socket event", payload);
         const data = payload.data ?? {};
 
-        if (payload.type === "presence.count") {
+        if (payload.type === "connection.ready") {
+          const status = data.status || "open";
+          const value = { ...conversationRef.current, status };
+          conversationRef.current = value;
+          setConversation(value);
+          setIsEnded(status === "closed");
+        } else if (payload.type === "presence.count") {
           const count = Number(data.online_count);
           if (Number.isFinite(count)) {
             setOnlineSupportCount(Math.max(0, Math.floor(count)));
@@ -345,8 +410,15 @@ export function useChat(config) {
         } else if (payload.type === "ai.response.failed") {
           setIsResponding(false);
           setMessages((current) => [...current, systemMessage("We couldn't generate a reply. Please try again.")]);
-        } else if (["session.resolved", "session.closed"].includes(payload.type)) {
-          setIsEnded(true);
+        } else if (
+          typeof payload.type === "string" &&
+          payload.type.startsWith("session.")
+        ) {
+          const status = data.status || payload.type.slice("session.".length);
+          const value = { ...conversationRef.current, status };
+          conversationRef.current = value;
+          setConversation(value);
+          setIsEnded(payload.type === "session.closed" || status === "closed");
           setIsResponding(false);
         } else if (payload.type === "error") {
           setIsSending(false);
@@ -354,10 +426,47 @@ export function useChat(config) {
           setMessages((current) => [...current, systemMessage(data.message || "The message could not be sent.")]);
         }
       });
-      socket.addEventListener("close", (event) => {
+      socket.addEventListener("close", async (event) => {
         window.clearInterval(heartbeatTimer);
         setIsConnected(false);
-        if (!active || [4401, 4403, 4404].includes(event.code)) return;
+        if (!active) return;
+        if (event.code === 4401) {
+          try {
+            const previousUrl = conversationRef.current?.websocketUrl;
+            const refreshed = await refreshConversation();
+            if (active && refreshed?.websocketUrl === previousUrl) {
+              reconnectTimer = window.setTimeout(connect, 1000);
+            }
+          } catch (error) {
+            if (config.debug) {
+              console.warn("[Argon] Conversation token could not be refreshed", error);
+            }
+            setMessages((current) => [
+              ...current,
+              systemMessage("Your chat session expired. Please start again."),
+            ]);
+            setIsEnded(true);
+          }
+          return;
+        }
+        if ([4403, 4404].includes(event.code)) {
+          if (event.code === 4404 && conversationRef.current?.token) {
+            clearConversationToken(
+              config.publicKey,
+              conversationRef.current.token,
+            );
+          }
+          setMessages((current) => [
+            ...current,
+            systemMessage(
+              event.code === 4403
+                ? "This chat is not available from this site."
+                : "This conversation is no longer available.",
+            ),
+          ]);
+          setIsEnded(true);
+          return;
+        }
         attempts += 1;
         reconnectTimer = window.setTimeout(connect, Math.min(1000 * 2 ** attempts, 15000));
       });
@@ -371,11 +480,24 @@ export function useChat(config) {
       window.clearInterval(heartbeatTimer);
       socket?.close();
     };
-  }, [config.debug, conversation?.websocketUrl, isEnded]);
+  }, [
+    config.debug,
+    config.publicKey,
+    conversation?.websocketUrl,
+    isEnded,
+    refreshConversation,
+  ]);
 
   const send = useCallback(async (content) => {
     const text = content.trim();
     if (!text || isSending || isEnded) return;
+    if (text.length > 10000) {
+      setMessages((current) => [
+        ...current,
+        systemMessage("Messages can be at most 10,000 characters."),
+      ]);
+      return;
+    }
     const clientMessageId = createClientMessageId();
     setMessages((current) => [...current, {
       id: clientMessageId,
@@ -420,6 +542,7 @@ export function useChat(config) {
     visitor,
     visitorSessions,
     isVisitorLoaded,
+    hasStoredVisitor: Boolean(getVisitorRecord(config.publicKey)?.visitorId),
     hasStoredConversation: Boolean(getConversationToken(config.publicKey)),
     hasConversation: Boolean(conversation),
     conversation,
