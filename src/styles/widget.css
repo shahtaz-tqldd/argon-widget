@@ -132,7 +132,7 @@
 }
 .argon-chatbot-avatar--fallback {
   padding: 8px;
-  background: #3A86FF;
+  background: #3a86ff;
 }
 .argon-chatbot-avatar--fallback.argon-chatbot-avatar--xs,
 .argon-chatbot-avatar--fallback.argon-chatbot-avatar--sm {
@@ -346,11 +346,58 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
   padding: 18px 17px 22px;
   background: var(--argon-secondary, #f7f8fb);
-  scrollbar-width: thin;
-  scrollbar-color: #d7dae3 transparent;
+}
+.argon-scroll {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.argon-scroll-viewport {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.argon-scroll-viewport::-webkit-scrollbar {
+  display: none;
+}
+.argon-scroll-track {
+  position: absolute;
+  inset: 0 0 0 auto;
+  z-index: 20;
+  width: 10px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+.argon-scroll-track--visible {
+  opacity: 1;
+}
+.argon-scroll-thumb {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--argon-primary) 55%, transparent);
+  touch-action: none;
+  transition:
+    background-color 0.15s ease,
+    width 0.15s ease;
+}
+.argon-scroll-track--visible .argon-scroll-thumb {
+  pointer-events: auto;
+}
+.argon-scroll-thumb:hover {
+  width: 7px;
+  background: color-mix(in srgb, var(--argon-primary) 75%, transparent);
+}
+.argon-scroll-thumb:active {
+  background: var(--argon-primary);
 }
 .argon-message-entry {
   display: contents;
@@ -384,20 +431,32 @@
 .argon-message-row--visitor {
   align-items: flex-end;
 }
+.argon-message-row--ai,
+.argon-message-row--bot,
+.argon-message-row--support {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
 .argon-message-row--continuation {
   margin-top: -3px;
 }
-.argon-message-sender {
+.argon-message-stack {
+  max-width: 82%;
   display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 20px;
-  margin: 2px 4px 0;
-  color: #555d6d;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
 }
-.argon-message-sender strong {
+.argon-message-row--visitor .argon-message-stack {
+  align-items: flex-end;
+}
+.argon-message-name {
   overflow: hidden;
   max-width: 230px;
+  padding: 0 4px;
+  color: #555d6d;
   font-size: 11px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -405,8 +464,8 @@
 }
 .argon-message-avatar {
   position: relative;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: grid;
   flex: 0 0 auto;
   place-items: center;
@@ -414,7 +473,7 @@
   border-radius: 50%;
   color: #fff;
   background: var(--argon-primary);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 750;
 }
 .argon-message-avatar img {
@@ -425,7 +484,6 @@
   object-fit: cover;
 }
 .argon-message {
-  max-width: 82%;
   padding: 10px 13px;
   border-radius: 15px;
   white-space: pre-wrap;
@@ -496,9 +554,9 @@
 .argon-session-list {
   display: grid;
   min-height: 0;
+  align-content: start;
   gap: 9px;
-  overflow-y: auto;
-  padding: 1px 2px 4px;
+  padding: 1px 3px 4px 1px;
 }
 .argon-session-card {
   width: 100%;
@@ -506,21 +564,24 @@
   align-items: flex-start;
   gap: 11px;
   padding: 12px;
-  border: 1px solid #e1e4eb;
+  border: 0;
   border-radius: 14px;
   color: #1b2130;
-  background: #fff;
+  background: #ffffff;
   text-align: left;
   cursor: pointer;
   transition:
-    border-color 0.16s ease,
+    background-color 0.16s ease,
     transform 0.16s ease,
     box-shadow 0.16s ease;
 }
 .argon-session-card:not(:disabled):hover {
-  border-color: color-mix(in srgb, var(--argon-primary) 42%, #e1e4eb);
-  box-shadow: 0 5px 16px rgba(21, 29, 46, 0.07);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--argon-primary) 10%, #fff);
+}
+.argon-session-card:not(:disabled):active {
+  background: color-mix(in srgb, var(--argon-primary) 9%, #fff);
+  box-shadow: 0 2px 8px rgba(21, 29, 46, 0.08);
+  transform: scale(0.99);
 }
 .argon-session-card:disabled {
   cursor: default;
@@ -531,7 +592,7 @@
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 18px;
+  border-radius: 12px;
   color: var(--argon-primary);
   background: color-mix(in srgb, var(--argon-primary) 11%, #fff);
 }
@@ -570,6 +631,7 @@
   color: #4e5565;
   font-size: 12px;
   line-height: 1.4;
+  line-clamp: 2;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -592,23 +654,6 @@
   color: #676e7d;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   text-overflow: ellipsis;
-}
-.argon-session-status {
-  flex: 0 0 auto;
-  padding: 3px 7px;
-  border-radius: 999px;
-  color: var(--argon-primary);
-  background: color-mix(in srgb, var(--argon-primary) 11%, #fff);
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  line-height: 1.35;
-  text-transform: uppercase;
-}
-.argon-session-status--resolved,
-.argon-session-status--closed {
-  color: #737988;
-  background: #eff1f4;
 }
 .argon-new-session {
   min-height: 42px;
@@ -789,23 +834,30 @@
 }
 .argon-composer {
   display: flex;
-  align-items: flex-end;
-  gap: 9px;
-  padding: 12px 13px;
+  flex-direction: column;
+  padding: 10px 13px;
   border-top: 1px solid #eceef3;
   background: #fff;
 }
+.argon-composer-field {
+  position: relative;
+}
 .argon-composer textarea {
+  display: block;
   width: 100%;
-  min-height: 40px;
-  max-height: 108px;
+  min-height: 44px;
+  max-height: 132px;
+  overflow-y: auto;
   resize: none;
-  padding: 10px 12px;
+  padding: 11px 13px;
   border: 1px solid transparent;
   border-radius: 12px;
   outline: none;
   color: #1b2130;
   background: #f3f4f7;
+  line-height: 1.45;
+  scrollbar-width: thin;
+  scrollbar-color: #d7dae3 transparent;
 }
 .argon-composer textarea:focus {
   border-color: color-mix(in srgb, var(--argon-primary) 35%, transparent);
@@ -814,32 +866,241 @@
 .argon-composer textarea::placeholder {
   color: #9298a7;
 }
-.argon-composer button {
-  width: 40px;
-  height: 40px;
+.argon-composer textarea:disabled {
+  cursor: not-allowed;
+}
+.argon-composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 6px;
+}
+.argon-composer-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+.argon-composer-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #555d6d;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.argon-composer-icon:not(:disabled):hover {
+  color: var(--argon-primary);
+  background: #f3f4f7;
+}
+.argon-composer-icon:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.argon-composer-send {
+  width: 38px;
+  height: 38px;
   display: grid;
   flex: 0 0 auto;
   place-items: center;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   color: #fff;
   background: var(--argon-primary);
   cursor: pointer;
 }
-.argon-composer button:disabled {
+.argon-composer-send:disabled {
   opacity: 0.42;
   cursor: default;
 }
-.argon-composer textarea:disabled {
-  cursor: not-allowed;
-}
-.argon-composer svg {
-  width: 19px;
+.argon-composer-icon svg,
+.argon-composer-send svg {
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.argon-composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.argon-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 4px 6px 4px 5px;
+  border-radius: 9px;
+  background: #f3f4f7;
+  font-size: 11px;
+}
+.argon-attachment-badge {
+  flex: 0 0 auto;
+  padding: 3px 5px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.argon-attachment-badge--pdf {
+  background: #d92d20;
+}
+.argon-attachment-badge--doc {
+  background: #1570ef;
+}
+.argon-attachment-badge--sheet {
+  background: #039855;
+}
+.argon-attachment-badge--image {
+  background: #6941c6;
+}
+.argon-attachment-badge--file {
+  background: #737988;
+}
+.argon-attachment-chip-name {
+  overflow: hidden;
+  max-width: 150px;
+  color: #1b2130;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argon-attachment-chip-size {
+  flex: 0 0 auto;
+  color: #858b98;
+  font-size: 10px;
+}
+.argon-attachment-chip button {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #737988;
+  background: transparent;
+  cursor: pointer;
+}
+.argon-attachment-chip button:hover {
+  color: #d92d20;
+  background: #e9eaf0;
+}
+.argon-attachment-chip button svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+.argon-composer-error {
+  margin: 0 0 8px;
+  color: #b42318;
+  font-size: 11px;
+}
+.argon-composer-dictation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 6px 6px 11px;
+  border-radius: 10px;
+  color: #555d6d;
+  background: color-mix(in srgb, var(--argon-primary) 8%, #fff);
+  font-size: 11px;
+}
+.argon-composer-dictation-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #d92d20;
+  animation: argon-dot-pulse 0.9s ease-in-out infinite alternate;
+}
+.argon-composer-dictation-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.argon-composer-dictation button {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 999px;
+  color: #d92d20;
+  background: color-mix(in srgb, #d92d20 10%, transparent);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.argon-composer-mic--active {
+  color: #d92d20;
+  background: color-mix(in srgb, #d92d20 10%, transparent);
+  animation: argon-mic-pulse 1.4s ease-out infinite;
+}
+.argon-emoji-picker {
+  position: absolute;
+  z-index: 30;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: 272px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 7px;
+  border: 1px solid rgba(21, 29, 46, 0.1);
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(21, 29, 46, 0.18);
+  animation: argon-menu-enter 0.14s ease-out;
+}
+.argon-emoji-picker button {
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+.argon-emoji-picker button:hover {
+  background: #f3f4f7;
+}
+@keyframes argon-dot-pulse {
+  to {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+}
+@keyframes argon-mic-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 45, 32, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 9px rgba(217, 45, 32, 0);
+  }
 }
 .argon-panel footer {
   padding: 8px;
@@ -905,19 +1166,17 @@
 }
 .argon-widget--dark .argon-session-card {
   color: #f5f6f8;
-  border-color: #353a45;
   background: #252932;
+}
+.argon-widget--dark .argon-session-card:not(:disabled):hover {
+  background: color-mix(in srgb, var(--argon-primary) 14%, #252932);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+.argon-widget--dark .argon-session-card:not(:disabled):active {
+  background: color-mix(in srgb, var(--argon-primary) 20%, #252932);
 }
 .argon-widget--dark .argon-session-message-icon {
   background: color-mix(in srgb, var(--argon-primary) 18%, #252932);
-}
-.argon-widget--dark .argon-session-status {
-  background: color-mix(in srgb, var(--argon-primary) 20%, #252932);
-}
-.argon-widget--dark .argon-session-status--resolved,
-.argon-widget--dark .argon-session-status--closed {
-  color: #aeb3bf;
-  background: #353a45;
 }
 .argon-widget--dark .argon-input {
   color: #f5f6f8;
@@ -943,7 +1202,7 @@
 }
 .argon-widget--dark .argon-message-date,
 .argon-widget--dark .argon-message-meta,
-.argon-widget--dark .argon-message-sender {
+.argon-widget--dark .argon-message-name {
   color: #aeb3bf;
 }
 .argon-widget--dark .argon-message-date::before,
@@ -960,6 +1219,30 @@
 .argon-widget--dark .argon-composer textarea {
   color: #f5f6f8;
   background: #252932;
+}
+.argon-widget--dark .argon-composer-icon:not(:disabled):hover {
+  color: var(--argon-primary);
+  background: #252932;
+}
+.argon-widget--dark .argon-attachment-chip {
+  background: #252932;
+}
+.argon-widget--dark .argon-attachment-chip-name {
+  color: #eef0f5;
+}
+.argon-widget--dark .argon-attachment-chip button:hover {
+  background: #353a45;
+}
+.argon-widget--dark .argon-composer-dictation {
+  color: #c2c6d0;
+  background: color-mix(in srgb, var(--argon-primary) 16%, #252932);
+}
+.argon-widget--dark .argon-emoji-picker {
+  border-color: #353a45;
+  background: #252932;
+}
+.argon-widget--dark .argon-emoji-picker button:hover {
+  background: #353a45;
 }
 .argon-widget--dark .argon-launcher-text {
   color: #eef0f5;
@@ -984,7 +1267,13 @@
   .argon-panel,
   .argon-launcher,
   .argon-typing i,
-  .argon-menu {
+  .argon-menu,
+  .argon-session-card,
+  .argon-scroll-track,
+  .argon-scroll-thumb,
+  .argon-emoji-picker,
+  .argon-composer-dictation-dot,
+  .argon-composer-mic--active {
     animation: none;
     transition: none;
   }

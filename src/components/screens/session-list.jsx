@@ -1,5 +1,12 @@
 import { SessionMessageIcon } from "../icons";
+import { ScrollContainer } from "../ui/scroll-container";
 import { BaseHeader } from "../widget-header";
+
+const SESSION_DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
 
 function formatSessionDate(value, now = Date.now()) {
   if (!value) return "";
@@ -10,20 +17,23 @@ function formatSessionDate(value, now = Date.now()) {
   const elapsedMinutes = Math.floor(elapsedMilliseconds / 60_000);
 
   if (elapsedMinutes < 1) return "just now";
-  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+  if (elapsedMinutes < 60) {
+    return elapsedMinutes === 1
+      ? "1 minute ago"
+      : `${elapsedMinutes} minutes ago`;
+  }
 
   const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24) return `${elapsedHours}h ago`;
+  if (elapsedHours < 24) {
+    return elapsedHours === 1 ? "1 hour ago" : `${elapsedHours} hours ago`;
+  }
 
   const elapsedDays = Math.floor(elapsedHours / 24);
   if (elapsedDays === 1) return "yesterday";
-  if (elapsedDays < 30) return `${elapsedDays}d ago`;
+  if (elapsedDays < 7) return `${elapsedDays} days ago`;
+  if (elapsedDays < 14) return "1 week ago";
 
-  const elapsedMonths = Math.floor(elapsedDays / 30);
-  if (elapsedMonths < 12) return `${elapsedMonths}mo ago`;
-
-  const elapsedYears = Math.floor(elapsedDays / 365);
-  return `${elapsedYears}y ago`;
+  return SESSION_DATE_FORMAT.format(date);
 }
 
 function getSessionDetails(session) {
@@ -49,7 +59,6 @@ function getSessionDetails(session) {
     shortId: String(session.id || "")
       .slice(0, 8)
       .toUpperCase(),
-    status: String(session.status || "unknown").toLowerCase(),
   };
 }
 
@@ -81,7 +90,7 @@ export function SessionListScreen({
         >
           {isLoading ? "Opening..." : "Start a new conversation"}
         </button>
-        <div className="argon-session-list">
+        <ScrollContainer className="argon-session-list">
           {!sessions.length && !isLoading && (
             <p className="argon-session-empty">No conversations yet.</p>
           )}
@@ -99,8 +108,8 @@ export function SessionListScreen({
                 onClick={() => onResume(session)}
                 aria-label={
                   canOpen
-                    ? `Open session ${details.shortId} with ${details.sender}`
-                    : `Session ${details.shortId}, ${details.status}`
+                    ? `Continue conversation with ${details.sender}`
+                    : `Conversation ${details.shortId} is unavailable`
                 }
               >
                 <span className="argon-session-message-icon" aria-hidden="true">
@@ -109,11 +118,6 @@ export function SessionListScreen({
                 <span className="argon-session-card-copy">
                   <span className="argon-session-card-topline">
                     <strong title={details.sender}>{details.sender}</strong>
-                    <span
-                      className={`argon-session-status argon-session-status--${details.status}`}
-                    >
-                      {details.status}
-                    </span>
                   </span>
                   <span className="argon-session-preview">
                     {details.preview}
@@ -133,7 +137,7 @@ export function SessionListScreen({
               </button>
             );
           })}
-        </div>
+        </ScrollContainer>
         {error && (
           <p className="argon-lead-error" role="alert">
             {error}

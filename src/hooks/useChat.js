@@ -488,9 +488,12 @@ export function useChat(config) {
     refreshConversation,
   ]);
 
-  const send = useCallback(async (content) => {
-    const text = content.trim();
-    if (!text || isSending || isEnded) return;
+  const send = useCallback(async (content, attachments = []) => {
+    const text = String(content ?? "").trim();
+    const files = (Array.isArray(attachments) ? attachments : []).filter(
+      (file) => file && typeof file.name === "string",
+    );
+    if ((!text && files.length === 0) || isSending || isEnded) return;
     if (text.length > 10000) {
       setMessages((current) => [
         ...current,
@@ -498,11 +501,15 @@ export function useChat(config) {
       ]);
       return;
     }
+    const attachmentLines = files.map((file) => `📎 ${file.name}`);
+    const displayContent = [text, ...attachmentLines]
+      .filter(Boolean)
+      .join("\n");
     const clientMessageId = createClientMessageId();
     setMessages((current) => [...current, {
       id: clientMessageId,
       externalId: clientMessageId,
-      content: text,
+      content: displayContent,
       sender: "visitor",
       status: "sending",
       createdAt: new Date().toISOString(),
@@ -513,7 +520,12 @@ export function useChat(config) {
     try {
       const activeConversation = await start();
       const response = await api.sendMessage({
-        content: text,
+        content: text || files.map((file) => file.name).join(", "),
+        attachments: files.map(({ name, type, size }) => ({
+          name,
+          type,
+          size,
+        })),
         sessionId: activeConversation.sessionId,
         conversationToken: activeConversation.token,
         clientMessageId,

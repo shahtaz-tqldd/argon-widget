@@ -1,3 +1,4 @@
+import { collectDeviceMetadata, resolveNetworkGeo } from "../lib/clientContext";
 import { request } from "./httpClient";
 
 function chatbotEndpoint(config, suffix = "") {
@@ -6,20 +7,36 @@ function chatbotEndpoint(config, suffix = "") {
   return `${baseUrl}/chatbots/${publicKey}/${suffix}`;
 }
 
-function getWidgetContext() {
-  if (typeof window === "undefined") return {};
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+function getTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "";
+  }
+}
+
+async function getWidgetContext() {
+  const geo = await resolveNetworkGeo();
+  const timezone = getTimezone();
+
   return {
     userMetadata: {
-      ...(navigator.language ? { locale: navigator.language } : {}),
+      ...geo,
+      device: collectDeviceMetadata(),
+      ...(typeof navigator !== "undefined" && navigator.language
+        ? { locale: navigator.language }
+        : {}),
       ...(timezone ? { timezone } : {}),
     },
-    metadata: {
-      page_url: window.location.href,
-      ...(typeof document !== "undefined" && document.title
-        ? { page_title: document.title }
-        : {}),
-    },
+    metadata:
+      typeof window === "undefined"
+        ? {}
+        : {
+            page_url: window.location.href,
+            ...(typeof document !== "undefined" && document.title
+              ? { page_title: document.title }
+              : {}),
+          },
   };
 }
 
@@ -72,7 +89,7 @@ export function createWidgetApi(config, visitorId) {
       { conversationToken = "", leadData } = {},
       options = {},
     ) {
-      const { userMetadata = {}, metadata = {} } = getWidgetContext();
+      const { userMetadata = {}, metadata = {} } = await getWidgetContext();
       return request(visitorEndpoint("visitor/create/"), {
         method: "POST",
         ...options,
@@ -92,18 +109,28 @@ export function createWidgetApi(config, visitorId) {
       sessionId,
       conversationToken,
       clientMessageId,
+      attachments = [],
     }) {
       const query = new URLSearchParams({
         visitor_id: visitorId,
         session_id: sessionId,
       });
-      const { metadata = {} } = getWidgetContext();
+      const { metadata = {} } = await getWidgetContext();
       return request(`${chatbotEndpoint(config, "messages/create/")}?${query}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${conversationToken}` },
         body: {
           content,
           client_message_id: clientMessageId,
+          ...(attachments.length
+            ? {
+                attachments: attachments.map(({ name, type, size }) => ({
+                  name,
+                  type,
+                  size,
+                })),
+              }
+            : {}),
           ...(Object.keys(metadata).length ? { metadata } : {}),
         },
       });

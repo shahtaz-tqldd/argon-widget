@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { SendIcon } from "../icons";
+import { useEffect, useRef } from "react";
+import { MessageComposer } from "../composer";
+import { ChatbotAvatar } from "../ui/avatar";
+import { ScrollContainer } from "../ui/scroll-container";
 import { ChatHeader } from "../widget-header";
 
 function parseMessageDate(value) {
@@ -169,33 +171,36 @@ function MessageTimeline({ config, messages }) {
               .filter(Boolean)
               .join(" ")}
           >
-            {startsSenderGroup && (isSupport || isAssistant) && (
-              <div className="argon-message-sender">
-                {isSupport && (
-                  <SupportAvatar
-                    name={senderName}
-                    src={message.senderAvatar}
-                  />
-                )}
-                <strong>{senderName}</strong>
+            {(isSupport || isAssistant) &&
+              (isSupport ? (
+                <SupportAvatar
+                  name={senderName}
+                  src={message.senderAvatar}
+                />
+              ) : (
+                <ChatbotAvatar chatbot={config} size="xs" alt="" />
+              ))}
+            <div className="argon-message-stack">
+              {startsSenderGroup && (isSupport || isAssistant) && (
+                <strong className="argon-message-name">{senderName}</strong>
+              )}
+              <div
+                className={`argon-message argon-message--${message.sender}`}
+              >
+                {message.content}
               </div>
-            )}
-            <div
-              className={`argon-message argon-message--${message.sender}`}
-            >
-              {message.content}
+              {showMetadata && (
+                <div className="argon-message-meta">
+                  {time && (
+                    <time dateTime={message.createdAt} title={message.createdAt}>
+                      {time}
+                    </time>
+                  )}
+                  {time && status && <span aria-hidden="true">&middot;</span>}
+                  {status && <span>{status}</span>}
+                </div>
+              )}
             </div>
-            {showMetadata && (
-              <div className="argon-message-meta">
-                {time && (
-                  <time dateTime={message.createdAt} title={message.createdAt}>
-                    {time}
-                  </time>
-                )}
-                {time && status && <span aria-hidden="true">&middot;</span>}
-                {status && <span>{status}</span>}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -215,32 +220,24 @@ export function ChatScreen({
   onRetry,
   onSend,
 }) {
-  const [draft, setDraft] = useState("");
   const messageEndRef = useRef(null);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
 
-  function handleSubmit(event) {
-    event.preventDefault();
-    if (!draft.trim()) return;
-    onSend(draft);
-    setDraft("");
-  }
-
   let content;
 
   if (isLoading) {
     content = (
-      <div className="argon-messages" aria-live="polite">
+      <ScrollContainer className="argon-messages" aria-live="polite">
         <MessageTimeline config={config} messages={[]} />
         <div className="argon-typing" aria-label="Loading chat">
           <i />
           <i />
           <i />
         </div>
-      </div>
+      </ScrollContainer>
     );
   } else if (error) {
     content = (
@@ -255,7 +252,7 @@ export function ChatScreen({
   } else {
     content = (
       <>
-        <div className="argon-messages" aria-live="polite">
+        <ScrollContainer className="argon-messages" aria-live="polite">
           <MessageTimeline config={config} messages={messages} />
           {(isSending || isResponding) && (
             <div className="argon-typing" aria-label="Assistant is typing">
@@ -265,33 +262,13 @@ export function ChatScreen({
             </div>
           )}
           <div ref={messageEndRef} />
-        </div>
-        <form className="argon-composer" onSubmit={handleSubmit}>
-          <label className="argon-sr-only" htmlFor="argon-message">
-            Message
-          </label>
-          <textarea
-            id="argon-message"
-            rows="1"
-            maxLength={10000}
-            value={draft}
-            disabled={isEnded}
-            placeholder={
-              isEnded ? "This conversation has ended" : config.placeholder
-            }
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) handleSubmit(event);
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!draft.trim() || isSending || isEnded}
-            aria-label="Send message"
-          >
-            <SendIcon />
-          </button>
-        </form>
+        </ScrollContainer>
+        <MessageComposer
+          config={config}
+          isSending={isSending}
+          isEnded={isEnded}
+          onSend={onSend}
+        />
       </>
     );
   }
