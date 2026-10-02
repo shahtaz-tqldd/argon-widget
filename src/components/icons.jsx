@@ -113,3 +113,32 @@ export function MicIcon() {
     </svg>
   );
 }
+
+export function NewSessionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+      <path d="M12 7v6" />
+      <path d="M9 10h6" />
+    </svg>
+  );
+}
+
+export function DownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  );
+}
+
+export function ReportIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z" />
+      <path d="M4 22v-7" />
+    </svg>
+  );
+}

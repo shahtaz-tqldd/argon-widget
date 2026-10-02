@@ -288,6 +288,9 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
           ) : screen === SCREENS.LEAD_FORM ? (
             <LeadFormScreen
               config={{
+                name: config.name,
+                chatbotName: config.chatbotName,
+                logo: config.logo,
                 ...config.leadConfig,
                 introMessage:
                   config.leadConfig.introMessage || config.welcomeMessage,
@@ -325,7 +328,14 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
 
           {config.showBranding && (
             <footer>
-              Powered by <strong>Argon Chatbot</strong>
+              Powered by{" "}
+              <a
+                href="https://argonchatbot.vercel.app"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <strong>Algo Chatbot</strong>
+              </a>
             </footer>
           )}
         </div>
@@ -336,7 +346,11 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
         )}
         <button
           type="button"
-          className={isOpen ? "argon-launcher argon-launcher--close" : "argon-launcher argon-launcher--avatar"}
+          className={
+            isOpen
+              ? "argon-launcher argon-launcher--close"
+              : "argon-launcher argon-launcher--avatar"
+          }
           onClick={toggleChat}
           aria-label={isOpen ? "Close chat" : "Open chat"}
           aria-expanded={isOpen}

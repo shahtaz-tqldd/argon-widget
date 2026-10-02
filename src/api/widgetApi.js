@@ -1,4 +1,4 @@
-import { collectDeviceMetadata, resolveNetworkGeo } from "../lib/clientContext";
+import { resolveNetworkGeo } from "../lib/clientContext";
 import { request } from "./httpClient";
 
 function chatbotEndpoint(config, suffix = "") {
@@ -7,37 +7,15 @@ function chatbotEndpoint(config, suffix = "") {
   return `${baseUrl}/chatbots/${publicKey}/${suffix}`;
 }
 
-function getTimezone() {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return "";
-  }
-}
-
-async function getWidgetContext() {
-  const geo = await resolveNetworkGeo();
-  const timezone = getTimezone();
-
-  return {
-    userMetadata: {
-      ...geo,
-      device: collectDeviceMetadata(),
-      ...(typeof navigator !== "undefined" && navigator.language
-        ? { locale: navigator.language }
-        : {}),
-      ...(timezone ? { timezone } : {}),
-    },
-    metadata:
-      typeof window === "undefined"
-        ? {}
-        : {
-            page_url: window.location.href,
-            ...(typeof document !== "undefined" && document.title
-              ? { page_title: document.title }
-              : {}),
-          },
-  };
+function getPageMetadata() {
+  return typeof window === "undefined"
+    ? {}
+    : {
+        page_url: window.location.href,
+        ...(typeof document !== "undefined" && document.title
+          ? { page_title: document.title }
+          : {}),
+      };
 }
 
 export function createWidgetApi(config, visitorId) {
@@ -89,7 +67,8 @@ export function createWidgetApi(config, visitorId) {
       { conversationToken = "", leadData } = {},
       options = {},
     ) {
-      const { userMetadata = {}, metadata = {} } = await getWidgetContext();
+      const userMetadata = await resolveNetworkGeo();
+      const metadata = getPageMetadata();
       return request(visitorEndpoint("visitor/create/"), {
         method: "POST",
         ...options,
@@ -115,7 +94,7 @@ export function createWidgetApi(config, visitorId) {
         visitor_id: visitorId,
         session_id: sessionId,
       });
-      const { metadata = {} } = await getWidgetContext();
+      const metadata = getPageMetadata();
       return request(`${chatbotEndpoint(config, "messages/create/")}?${query}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${conversationToken}` },

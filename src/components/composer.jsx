@@ -75,6 +75,7 @@ export function MessageComposer({ config, isSending, isEnded, onSend }) {
   const fileInputRef = useRef(null);
   const emojiButtonRef = useRef(null);
   const emojiPickerRef = useRef(null);
+  const selectionRef = useRef({ start: 0, end: 0 });
 
   const supportsVoiceInput =
     typeof window !== "undefined" &&
@@ -144,17 +145,29 @@ export function MessageComposer({ config, isSending, isEnded, onSend }) {
 
   function insertEmoji(emoji) {
     const textarea = textareaRef.current;
-    if (!textarea) {
-      setDraft((current) => current + emoji);
-      return;
-    }
-    const start = Math.min(textarea.selectionStart ?? draft.length, draft.length);
-    const end = Math.min(textarea.selectionEnd ?? start, draft.length);
+    const { start: savedStart, end: savedEnd } = selectionRef.current;
+    const start = Math.min(savedStart, draft.length);
+    const end = Math.min(savedEnd, draft.length);
+    const nextCaretPosition = start + emoji.length;
+
     setDraft(draft.slice(0, start) + emoji + draft.slice(end));
+
+    selectionRef.current = {
+      start: nextCaretPosition,
+      end: nextCaretPosition,
+    };
     requestAnimationFrame(() => {
+      if (!textarea) return;
       textarea.focus();
-      textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+      textarea.selectionStart = textarea.selectionEnd = nextCaretPosition;
     });
+  }
+
+  function rememberSelection(event) {
+    selectionRef.current = {
+      start: event.currentTarget.selectionStart ?? draft.length,
+      end: event.currentTarget.selectionEnd ?? draft.length,
+    };
   }
 
   function handleFilesSelected(event) {
@@ -200,6 +213,10 @@ export function MessageComposer({ config, isSending, isEnded, onSend }) {
 
   function handleDraftChange(event) {
     const value = event.target.value;
+    selectionRef.current = {
+      start: event.target.selectionStart ?? value.length,
+      end: event.target.selectionEnd ?? value.length,
+    };
     if (finalTranscript && value.endsWith(dictationSuffix)) {
       setDraft(value.slice(0, value.length - dictationSuffix.length));
       return;
@@ -288,6 +305,7 @@ export function MessageComposer({ config, isSending, isEnded, onSend }) {
             isEnded ? "This conversation has ended" : config.placeholder
           }
           onChange={handleDraftChange}
+          onSelect={rememberSelection}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) handleSubmit(event);
           }}
@@ -301,60 +319,75 @@ export function MessageComposer({ config, isSending, isEnded, onSend }) {
             ref={emojiPickerRef}
           >
             {EMOJIS.map((emoji) => (
-              <button key={emoji} type="button" onClick={() => insertEmoji(emoji)}>
+              <button
+                key={emoji}
+                type="button"
+                role="menuitem"
+                onPointerDown={(event) => {
+                  // Insert before the button takes focus and changes the
+                  // textarea's saved selection.
+                  event.preventDefault();
+                  insertEmoji(emoji);
+                }}
+                onClick={(event) => {
+                  // Keyboard and assistive-technology clicks do not have a
+                  // preceding pointer event.
+                  if (event.detail === 0) insertEmoji(emoji);
+                }}
+              >
                 {emoji}
               </button>
             ))}
           </div>
         )}
-      </div>
 
-      <div className="argon-composer-toolbar">
-        <div className="argon-composer-actions">
-          <button
-            ref={emojiButtonRef}
-            type="button"
-            className="argon-composer-icon"
-            aria-label="Insert emoji"
-            aria-haspopup="menu"
-            aria-expanded={isEmojiOpen}
-            disabled={isEnded}
-            onClick={() => setIsEmojiOpen((current) => !current)}
-          >
-            <SmileIcon />
-          </button>
-          <button
-            type="button"
-            className="argon-composer-icon"
-            aria-label="Attach file"
-            title="PDF, Word, Excel, CSV or image (max 5 MB)"
-            disabled={isEnded}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <PaperclipIcon />
-          </button>
-          {canUseVoice && (
+        <div className="argon-composer-toolbar">
+          <div className="argon-composer-actions">
+            <button
+              ref={emojiButtonRef}
+              type="button"
+              className="argon-composer-icon"
+              aria-label="Insert emoji"
+              aria-haspopup="menu"
+              aria-expanded={isEmojiOpen}
+              disabled={isEnded}
+              onClick={() => setIsEmojiOpen((current) => !current)}
+            >
+              <SmileIcon />
+            </button>
             <button
               type="button"
-              className={`argon-composer-icon argon-composer-mic${listening ? " argon-composer-mic--active" : ""}`}
-              aria-label={listening ? "Stop voice input" : "Start voice input"}
-              aria-pressed={listening}
+              className="argon-composer-icon"
+              aria-label="Attach file"
+              title="PDF, Word, Excel, CSV or image (max 5 MB)"
               disabled={isEnded}
-              onClick={toggleDictation}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <MicIcon />
+              <PaperclipIcon />
             </button>
-          )}
-        </div>
+            {canUseVoice && (
+              <button
+                type="button"
+                className={`argon-composer-icon argon-composer-mic${listening ? " argon-composer-mic--active" : ""}`}
+                aria-label={listening ? "Stop voice input" : "Start voice input"}
+                aria-pressed={listening}
+                disabled={isEnded}
+                onClick={toggleDictation}
+              >
+                <MicIcon />
+              </button>
+            )}
+          </div>
 
-        <button
-          type="submit"
-          className="argon-composer-send"
-          disabled={!canSubmit}
-          aria-label="Send message"
-        >
-          <SendIcon />
-        </button>
+          <button
+            type="submit"
+            className="argon-composer-send"
+            disabled={!canSubmit}
+            aria-label="Send message"
+          >
+            <SendIcon />
+          </button>
+        </div>
       </div>
 
       <input

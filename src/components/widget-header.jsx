@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { LeftIcon, MenuIcon } from "./icons";
+import {
+  DownloadIcon,
+  LeftIcon,
+  MenuIcon,
+  NewSessionIcon,
+  ReportIcon,
+} from "./icons";
 
 function BackButton({ isBusy, onBack }) {
   return (
@@ -85,7 +91,8 @@ function HeaderMenu({
             disabled={isBusy}
             onClick={() => runMenuAction(onStartNew)}
           >
-            Start a new session
+            <NewSessionIcon />
+            <span>Start a new session</span>
           </button>
           <button
             type="button"
@@ -93,7 +100,8 @@ function HeaderMenu({
             disabled={!canDownload || isBusy}
             onClick={() => runMenuAction(onDownload)}
           >
-            Download transcript
+            <DownloadIcon />
+            <span>Download transcript</span>
           </button>
           <button
             type="button"
@@ -101,7 +109,8 @@ function HeaderMenu({
             disabled={!canViewSessions || isBusy}
             onClick={() => runMenuAction(onViewSessions)}
           >
-            Report
+            <ReportIcon />
+            <span>Report</span>
           </button>
         </div>
       )}
