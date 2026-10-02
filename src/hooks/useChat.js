@@ -51,6 +51,10 @@ function normalizeMessage(message) {
       "",
     status: message.status || "",
     createdAt: message.created_at,
+    metadata:
+      message.metadata && typeof message.metadata === "object"
+        ? message.metadata
+        : {},
     pending: false,
   };
 }
@@ -245,60 +249,60 @@ export function useChat(config) {
 
     setIsStarting(true);
     startPromiseRef.current = (async () => {
-      const explicitlySelected = Boolean(conversationToken);
       const storedToken = forceNew
         ? ""
         : conversationToken || getConversationToken(config.publicKey);
-      if (session?.status === "closed" && storedToken) {
+
+      // A session was explicitly picked from the session list. Resolve it
+      // directly with its own token: visitor/create/ ignores the token and
+      // always returns the visitor's most recent session.
+      if (conversationToken && session?.id) {
+        const sessionStatus = String(session.status || "unknown").toLowerCase();
         const value = {
           sessionId: session.id,
-          token: storedToken,
-          websocketUrl: session.websocketUrl || "",
-          status: "closed",
+          token: conversationToken,
+          websocketUrl:
+            session.websocketUrl ||
+            fallbackWebsocketUrl(config, session.id, conversationToken),
+          status: sessionStatus,
           visitorId,
         };
         const history = await api.getConversationMessages({
           sessionId: value.sessionId,
           conversationToken: value.token,
         });
+        saveConversationToken(config.publicKey, value.token);
         saveVisitorConversation(config.publicKey, value);
         conversationRef.current = value;
         setConversation(value);
-        setIsEnded(true);
+        setIsEnded(sessionStatus === "closed");
         setMessages(messagesFromPage(history));
         return value;
       }
 
       let bootstrap;
       try {
-        bootstrap = await api.startConversation({
-          conversationToken: storedToken,
-          leadData,
-        });
+        bootstrap =
+          forceNew && !leadData
+            ? await api.createSession()
+            : await api.startConversation({
+                conversationToken: storedToken,
+                leadData,
+              });
       } catch (error) {
         if (!(error instanceof ApiError) || error.status !== 401 || !storedToken) throw error;
         clearConversationToken(config.publicKey, storedToken);
-        if (explicitlySelected) throw error;
         bootstrap = await api.startConversation({ leadData });
       }
 
       const value = conversationFromBootstrap(config, bootstrap, visitorId);
-      const history = session
-        ? await api.getConversationMessages({
-            sessionId: value.sessionId,
-            conversationToken: value.token,
-          })
-        : bootstrap.messages ?? [];
+      const history = bootstrap.messages ?? [];
       saveConversationToken(config.publicKey, value.token);
       saveVisitorConversation(config.publicKey, value);
       conversationRef.current = value;
       setConversation(value);
       setIsEnded(value.status === "closed");
-      setMessages(
-        session
-          ? messagesFromPage(history)
-          : history.map(normalizeMessage),
-      );
+      setMessages(history.map(normalizeMessage));
       void loadVisitorHistory(value.visitorId).catch((error) => {
         if (config.debug) {
           console.warn("[Argon] Visitor history could not be refreshed", error);
@@ -314,6 +318,19 @@ export function useChat(config) {
       setIsStarting(false);
     }
   }, [api, config, loadVisitorHistory, visitorId]);
+
+  const bookAppointment = useCallback(
+    async ({ startsAt, collectedFields }) => {
+      const activeConversation = await start();
+      return api.bookAppointment({
+        sessionId: activeConversation.sessionId,
+        conversationToken: activeConversation.token,
+        startsAt,
+        collectedFields,
+      });
+    },
+    [api, start],
+  );
 
   const leaveConversation = useCallback(() => {
     conversationRef.current = null;
@@ -560,6 +577,7 @@ export function useChat(config) {
     conversation,
     start,
     send,
+    bookAppointment,
     leaveConversation,
     refreshVisitorHistory,
   };

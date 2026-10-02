@@ -51,6 +51,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     conversation,
     start,
     send,
+    bookAppointment,
     leaveConversation,
     refreshVisitorHistory,
   } = useChat(baseConfig);
@@ -102,12 +103,7 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     start(
       resumeStoredConversation
         ? undefined
-        : {
-            forceNew: true,
-            ...(startMode === "new" && visitor?.lead_data
-              ? { leadData: visitor.lead_data }
-              : {}),
-          },
+        : { forceNew: true },
     ).catch((error) => {
       setSessionError(
         error.message || "The conversation could not be started.",
@@ -123,7 +119,6 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
     sessionError,
     start,
     startMode,
-    visitor,
   ]);
 
   function toggleChat() {
@@ -323,6 +318,8 @@ export function ChatWidget({ config: suppliedConfig = {} }) {
               error={!hasConversation ? sessionError : ""}
               onRetry={() => setSessionError("")}
               onSend={send}
+              onBookAppointment={bookAppointment}
+              leadData={visitor?.lead_data ?? null}
             />
           )}
 

@@ -18,6 +18,7 @@ export const defaultWidgetConfig = Object.freeze({
   theme: "light",
   language: "en",
   leadConfig: null,
+  appointmentConfig: null,
   debug: false,
 });
 
@@ -47,6 +48,7 @@ export function configFromElement(element) {
 export function mapPublicConfiguration(data) {
   const settings = data?.widget_settings ?? {};
   const leadConfig = data?.lead_config ?? {};
+  const appointmentConfig = data?.appointment_config ?? {};
   return {
     name: settings.header_title || data?.chatbot_name,
     chatbotName: data?.chatbot_name,
@@ -73,5 +75,13 @@ export function mapPublicConfiguration(data) {
         ? leadConfig.collectable_fields
         : [],
     },
+    appointmentConfig: data?.appointment_config
+      ? {
+          fields: Array.isArray(appointmentConfig.collectable_fields)
+            ? appointmentConfig.collectable_fields
+            : [],
+          confirmationMessage: appointmentConfig.confirmation_message || "",
+        }
+      : null,
   };
 }

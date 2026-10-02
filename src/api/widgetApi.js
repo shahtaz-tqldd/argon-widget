@@ -83,6 +83,40 @@ export function createWidgetApi(config, visitorId) {
       });
     },
 
+    async createSession(options = {}) {
+      const userMetadata = await resolveNetworkGeo();
+      const metadata = getPageMetadata();
+      return request(visitorEndpoint("sessions/create/"), {
+        method: "POST",
+        ...options,
+        body: {
+          ...(Object.keys(userMetadata).length
+            ? { user_metadata: userMetadata }
+            : {}),
+          ...(Object.keys(metadata).length ? { metadata } : {}),
+        },
+      });
+    },
+
+    async bookAppointment(
+      { sessionId, conversationToken, startsAt, collectedFields },
+      options = {},
+    ) {
+      const query = new URLSearchParams({ session_id: sessionId });
+      return request(
+        `${chatbotEndpoint(config, "book-appointment/")}?${query}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${conversationToken}` },
+          ...options,
+          body: {
+            starts_at: startsAt,
+            collected_fields: collectedFields ?? {},
+          },
+        },
+      );
+    },
+
     async sendMessage({
       content,
       sessionId,

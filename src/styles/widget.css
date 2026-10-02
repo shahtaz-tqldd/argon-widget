@@ -162,6 +162,9 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
+.argon-chat-screen--booking {
+  grid-template-rows: auto minmax(0, 1fr) minmax(0, min(330px, 60%));
+}
 .argon-lead-screen,
 .argon-session-screen {
   grid-template-rows: auto minmax(0, 1fr);
@@ -1128,6 +1131,303 @@
 .argon-emoji-picker button:hover {
   background: #f3f4f7;
 }
+.argon-booking {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border-top: 1px solid #eceef3;
+  background: #fff;
+  overflow: hidden;
+}
+.argon-booking-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 13px;
+}
+.argon-booking-header {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+.argon-booking-header strong {
+  color: #1b2130;
+  font-size: 13px;
+}
+.argon-booking-timezone {
+  color: #7b8190;
+  font-size: 11px;
+}
+.argon-slot-grid {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 2px 2px 4px;
+  scrollbar-width: thin;
+}
+.argon-slot-grid::-webkit-scrollbar {
+  height: 5px;
+}
+.argon-slot-grid::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cfd3dd;
+}
+.argon-slot {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid #dde0e8;
+  border-radius: 999px;
+  color: #1b2130;
+  background: #fff;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.argon-slot:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--argon-primary) 45%, #dde0e8);
+}
+.argon-slot:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.argon-slot--selected,
+.argon-slot--selected:not(:disabled):hover {
+  border-color: var(--argon-primary);
+  background: color-mix(in srgb, var(--argon-primary) 10%, #fff);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--argon-primary) 22%, transparent);
+}
+.argon-slot-time {
+  font-size: 12px;
+  font-weight: 650;
+}
+.argon-slot-day {
+  color: #7b8190;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+.argon-booking-fields {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+.argon-booking-error {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+}
+.argon-booking-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 9px;
+  padding: 10px 13px 12px;
+  border-top: 1px solid #eceef3;
+  background: #fff;
+}
+.argon-booking-cancel,
+.argon-booking-confirm {
+  flex: 1 1 0;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.argon-booking-cancel {
+  color: #555c6b;
+  background: #eef0f5;
+}
+.argon-booking-cancel:not(:disabled):hover {
+  background: #e3e6ee;
+}
+.argon-booking-confirm {
+  color: #fff;
+  background: var(--argon-primary);
+}
+.argon-booking-confirm:not(:disabled):hover {
+  filter: brightness(1.06);
+}
+.argon-booking-cancel:disabled,
+.argon-booking-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.argon-booking-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 10px 13px 0;
+  padding: 10px 13px;
+  border: 1px solid color-mix(in srgb, var(--argon-primary) 30%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--argon-primary) 8%, #fff);
+}
+.argon-booking-confirmation strong {
+  color: #1b2130;
+  font-size: 12px;
+}
+.argon-booking-confirmation span {
+  color: #555c6b;
+  font-size: 11px;
+}
+.argon-appointment-message {
+  width: 290px;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--argon-primary) 25%, #dde0e8);
+  border-radius: 16px 16px 4px 16px;
+  color: #1b2130;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(21, 29, 46, 0.08);
+}
+.argon-appointment-message-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  background: color-mix(in srgb, var(--argon-primary) 8%, #fff);
+}
+.argon-appointment-message-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--argon-primary);
+  background: color-mix(in srgb, var(--argon-primary) 14%, #fff);
+}
+.argon-appointment-message-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.argon-appointment-message-title {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.argon-appointment-message-title strong {
+  font-size: 12px;
+  line-height: 1.35;
+}
+.argon-appointment-message-title > span {
+  color: #737988;
+  font-size: 10px;
+}
+.argon-appointment-status {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #8a5a00;
+  background: #fff1cc;
+  font-size: 9px;
+  font-weight: 700;
+}
+.argon-appointment-status--confirmed,
+.argon-appointment-status--completed {
+  color: #067647;
+  background: #dcfae6;
+}
+.argon-appointment-status--cancelled,
+.argon-appointment-status--canceled {
+  color: #b42318;
+  background: #fee4e2;
+}
+.argon-appointment-message-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+}
+.argon-appointment-message-time strong {
+  font-size: 13px;
+  line-height: 1.4;
+}
+.argon-appointment-message-time span {
+  color: #737988;
+  font-size: 10px;
+}
+.argon-appointment-details {
+  margin: 0 12px 12px;
+  border-top: 1px solid #eceef3;
+}
+.argon-appointment-details summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 0 0;
+  color: #555c6b;
+  font-size: 10px;
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+.argon-appointment-details summary::-webkit-details-marker {
+  display: none;
+}
+.argon-appointment-details summary::before {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: "";
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.argon-appointment-details[open] summary::before {
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.argon-appointment-details summary span {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #eef0f5;
+  text-align: center;
+}
+.argon-appointment-details dl {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 2px 13px;
+}
+.argon-appointment-details dl > div {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.7fr) minmax(0, 1.3fr);
+  gap: 8px;
+}
+.argon-appointment-details dt,
+.argon-appointment-details dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.argon-appointment-details dt {
+  color: #7b8190;
+}
+.argon-appointment-details dd {
+  color: #343a48;
+  font-weight: 600;
+}
 @keyframes argon-dot-pulse {
   to {
     opacity: 0.35;
@@ -1269,6 +1569,80 @@
 .argon-widget--dark .argon-message--system {
   color: #b8bdc8;
   background: #252932;
+}
+.argon-widget--dark .argon-booking {
+  border-color: #30343e;
+  background: #101217;
+}
+.argon-widget--dark .argon-booking-header strong,
+.argon-widget--dark .argon-slot,
+.argon-widget--dark .argon-booking-confirmation strong {
+  color: #f5f6f8;
+}
+.argon-widget--dark .argon-booking-timezone,
+.argon-widget--dark .argon-slot-day,
+.argon-widget--dark .argon-booking-confirmation span {
+  color: #aeb3bf;
+}
+.argon-widget--dark .argon-slot-grid::-webkit-scrollbar-thumb {
+  background: #3a3f4a;
+}
+.argon-widget--dark .argon-slot {
+  border-color: #3a3f4a;
+  background: #1a1d25;
+}
+.argon-widget--dark .argon-slot:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--argon-primary) 45%, #3a3f4a);
+}
+.argon-widget--dark .argon-slot--selected,
+.argon-widget--dark .argon-slot--selected:not(:disabled):hover {
+  border-color: var(--argon-primary);
+  background: color-mix(in srgb, var(--argon-primary) 16%, #1a1d25);
+}
+.argon-widget--dark .argon-booking-cancel {
+  color: #c2c6d0;
+  background: #252932;
+}
+.argon-widget--dark .argon-booking-cancel:not(:disabled):hover {
+  background: #303541;
+}
+.argon-widget--dark .argon-booking-actions {
+  border-color: #30343e;
+  background: #101217;
+}
+.argon-widget--dark .argon-booking-confirmation {
+  border-color: color-mix(
+    in srgb,
+    var(--argon-primary) 35%,
+    #30343e
+  );
+  background: color-mix(in srgb, var(--argon-primary) 12%, #1a1d25);
+}
+.argon-widget--dark .argon-appointment-message {
+  color: #f5f6f8;
+  border-color: color-mix(in srgb, var(--argon-primary) 35%, #30343e);
+  background: #1a1d25;
+}
+.argon-widget--dark .argon-appointment-message-heading,
+.argon-widget--dark .argon-appointment-message-icon {
+  background: color-mix(in srgb, var(--argon-primary) 16%, #252932);
+}
+.argon-widget--dark .argon-appointment-message-title > span,
+.argon-widget--dark .argon-appointment-message-time span,
+.argon-widget--dark .argon-appointment-details dt {
+  color: #aeb3bf;
+}
+.argon-widget--dark .argon-appointment-details {
+  border-color: #353a45;
+}
+.argon-widget--dark .argon-appointment-details summary {
+  color: #c2c6d0;
+}
+.argon-widget--dark .argon-appointment-details summary span {
+  background: #303541;
+}
+.argon-widget--dark .argon-appointment-details dd {
+  color: #eef0f5;
 }
 .argon-widget--dark .argon-composer {
   border-color: #30343e;

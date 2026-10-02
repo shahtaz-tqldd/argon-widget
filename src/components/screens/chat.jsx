@@ -1,4 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  AppointmentBooking,
+  AppointmentConfirmation,
+  AppointmentSubmission,
+} from "../appointment-booking";
 import { MessageComposer } from "../composer";
 import { ChatbotAvatar } from "../ui/avatar";
 import { ScrollContainer } from "../ui/scroll-container";
@@ -129,6 +134,8 @@ function MessageTimeline({ config, messages }) {
     const isSystem = message.sender === "system";
     const isSupport = message.sender === "support";
     const isAssistant = message.sender === "ai" || message.sender === "bot";
+    const isAppointmentSubmission =
+      message.metadata?.event_type === "appointment.submitted";
     const senderName = isSupport
       ? message.senderName || "Support"
       : assistantName;
@@ -184,11 +191,18 @@ function MessageTimeline({ config, messages }) {
               {startsSenderGroup && (isSupport || isAssistant) && (
                 <strong className="argon-message-name">{senderName}</strong>
               )}
-              <div
-                className={`argon-message argon-message--${message.sender}`}
-              >
-                {message.content}
-              </div>
+              {isAppointmentSubmission ? (
+                <AppointmentSubmission
+                  message={message}
+                  language={config.language}
+                />
+              ) : (
+                <div
+                  className={`argon-message argon-message--${message.sender}`}
+                >
+                  {message.content}
+                </div>
+              )}
               {showMetadata && (
                 <div className="argon-message-meta">
                   {time && (
@@ -208,6 +222,21 @@ function MessageTimeline({ config, messages }) {
   });
 }
 
+function getAppointmentOffer(messages) {
+  const lastMessage = messages[messages.length - 1];
+  const appointments = lastMessage?.metadata?.appointments;
+  if (
+    !lastMessage ||
+    lastMessage.sender === "system" ||
+    !appointments ||
+    !Array.isArray(appointments.available_slots) ||
+    appointments.available_slots.length === 0
+  ) {
+    return null;
+  }
+  return { message: lastMessage, appointments };
+}
+
 export function ChatScreen({
   config,
   headerProps,
@@ -219,12 +248,36 @@ export function ChatScreen({
   error,
   onRetry,
   onSend,
+  onBookAppointment,
+  leadData,
 }) {
   const messageEndRef = useRef(null);
+  const [appointmentStates, setAppointmentStates] = useState({});
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isSending]);
+
+  const appointmentOffer = isLoading ? null : getAppointmentOffer(messages);
+  const appointmentState = appointmentOffer
+    ? appointmentStates[appointmentOffer.message.id]
+    : undefined;
+  const isAppointmentActive =
+    Boolean(appointmentOffer) && !appointmentState && !isEnded;
+
+  function handleAppointmentCancelled(messageId) {
+    setAppointmentStates((current) => ({
+      ...current,
+      [messageId]: { cancelled: true },
+    }));
+  }
+
+  function handleAppointmentBooked(messageId, booking) {
+    setAppointmentStates((current) => ({
+      ...current,
+      [messageId]: booking,
+    }));
+  }
 
   let content;
 
@@ -263,18 +316,46 @@ export function ChatScreen({
           )}
           <div ref={messageEndRef} />
         </ScrollContainer>
-        <MessageComposer
-          config={config}
-          isSending={isSending}
-          isEnded={isEnded}
-          onSend={onSend}
-        />
+        {isAppointmentActive && appointmentOffer ? (
+          <AppointmentBooking
+            key={appointmentOffer.message.id}
+            message={appointmentOffer.message}
+            config={config}
+            leadData={leadData}
+            onBook={onBookAppointment}
+            onBooked={(booking) =>
+              handleAppointmentBooked(appointmentOffer.message.id, booking)
+            }
+            onCancelled={() =>
+              handleAppointmentCancelled(appointmentOffer.message.id)
+            }
+          />
+        ) : (
+          <>
+            {appointmentOffer && appointmentState?.appointment && (
+              <AppointmentConfirmation
+                config={config}
+                booking={appointmentState}
+              />
+            )}
+            <MessageComposer
+              config={config}
+              isSending={isSending}
+              isEnded={isEnded}
+              onSend={onSend}
+            />
+          </>
+        )}
       </>
     );
   }
 
   return (
-    <div className="argon-chat-screen">
+    <div
+      className={`argon-chat-screen${
+        isAppointmentActive ? " argon-chat-screen--booking" : ""
+      }`}
+    >
       <ChatHeader {...headerProps} />
       {content}
     </div>
